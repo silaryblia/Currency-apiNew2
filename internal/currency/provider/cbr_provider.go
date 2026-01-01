@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
-	"golang.org/x/text/encoding/charmap"
 	"io"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 type CBRProvider struct {
@@ -80,82 +81,6 @@ func (p *CBRProvider) ForceRefresh(ctx context.Context) (map[string]float64, tim
 	//return p.GetRates(ctx)
 	return p.loadRates(ctx)
 }
-
-//func (p *ExchangeRateHost) GetRates(ctx context.Context) (map[string]float64, error) {
-//	url := fmt.Sprintf("https://api.exchangerate.host/latest?base=%s",
-//		p.base,
-//	)
-//
-//	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	resp, err := p.client.Do(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer resp.Body.Close()
-//
-//	var result struct {
-//		Rates map[string]float64 `json:"rates"`
-//	}
-//
-//	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-//		return nil, err
-//	}
-//
-//	return result.Rates, nil
-//}
-
-//func (p *OpenERProvider) GetRates(ctx context.Context) (map[string]float64, error) {
-//	url := fmt.Sprintf("https://open.er-api.com/v6/latest/%s", p.base)
-//
-//	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	resp, err := p.client.Do(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer resp.Body.Close()
-//
-//	var result struct {
-//		Result string             `json:"result"` // "success" или "error"
-//		Rates  map[string]float64 `json:"rates"`
-//	}
-//
-//	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-//		return nil, err
-//	}
-//
-//	if result.Result != "success" || result.Rates == nil {
-//		return nil, fmt.Errorf("rates API returned no data")
-//	}
-//
-//	usdToRUB, ok := result.Rates["RUB"]
-//	if !ok {
-//		return nil, fmt.Errorf("RUB rate not found")
-//	}
-//
-//	// Старые InMemory значения для нормировки
-//	baseRates := map[string]float64{
-//		"USD": 80,
-//		"EUR": 85,
-//		"AED": 20,
-//	}
-//
-//	scale := usdToRUB / 80 // коэффициент пересчета
-//
-//	filtered := make(map[string]float64)
-//	for code, val := range baseRates {
-//		filtered[code] = val * scale
-//	}
-//
-//	return filtered, nil
-//}
 
 func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.Time, error) {
 	req, _ := http.NewRequestWithContext(ctx,
