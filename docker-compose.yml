@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: currency-postgres
+    environment:
+      POSTGRES_USER: currency
+      POSTGRES_PASSWORD: currency
+      POSTGRES_DB: currency
+    ports:
+      - "5432:5432"
+    volumes:
+      - currency-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U currency"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  currency-api:
+    build: .
+    container_name: currency-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      USE_POSTGRES: "true"
+      POSTGRES_DSN: "postgres://currency:currency@postgres:5432/currency?sslmode=disable"
+      PORT: "8081"
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+volumes:
+  currency-data:
