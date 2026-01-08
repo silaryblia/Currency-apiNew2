@@ -16,6 +16,8 @@ WORKDIR /app
 
 COPY --from=builder /app/app .
 
+RUN apk --no-cache add tzdata ca-certificates
+
 EXPOSE 8081
 
-ENTRYPOINT ["./app"]
+CMD ["./app"]

@@ -63,7 +63,7 @@ func NewServer(logger *zap.Logger) *Server {
 
 func (s *Server) Run() error {
 	httpServer := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":50051",
 		Handler: s.router,
 	}
 
