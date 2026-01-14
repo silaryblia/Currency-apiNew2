@@ -1,15 +1,17 @@
 package grpc
 
 import (
+	"Currency-apiNew2/internal/currency/domain"
 	_ "Currency-apiNew2/internal/currency/domain"
 	pb "Currency-apiNew2/internal/currency/proto"
 	"Currency-apiNew2/internal/currency/service"
 	"context"
+	"fmt"
+	"net"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"log"
-	"net"
 )
 
 type CurrencyServer struct {
@@ -27,35 +29,40 @@ func (s *CurrencyServer) GetAll(ctx context.Context, req *pb.GetAllRequest) (*pb
 		return nil, err
 	}
 
-	var currenciesMap = make(map[string]*pb.Currency)
-	for code, c := range currencies {
-		currenciesMap[code] = &pb.Currency{
-			Code:     c.Code,
-			Rate:     c.Rate,
-			RateDate: timestamppb.New(c.RateDate),
-		}
-	}
-
-	return &pb.GetAllResponse{Currencies: currenciesMap}, nil
+	return &pb.GetAllResponse{Currencies: ToProtoCurrencyMap(currencies)}, nil
 }
 
 func (s *CurrencyServer) GetOne(ctx context.Context, req *pb.GetOneRequest) (*pb.GetOneResponse, error) {
-	currency, err := s.service.GetOne(ctx, req.Code)
+	code, err := domain.ParseCurrencyCode(req.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	currency, err := s.service.GetOne(ctx, code)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.GetOneResponse{
 		Currency: &pb.Currency{
-			Code:     currency.Code,
-			Rate:     currency.Rate,
+			Code:     currency.Code.String(),
+			Rate:     currency.Rate.Float64(),
 			RateDate: timestamppb.New(currency.RateDate),
 		},
 	}, nil
 }
 
 func (s *CurrencyServer) Create(ctx context.Context, req *pb.Currency) (*pb.Currency, error) {
-	err := s.service.Create(ctx, req.Code, req.Rate, req.RateDate.AsTime())
+	code, err := domain.ParseCurrencyCode(req.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	rate, err := domain.NewRate(req.Rate)
+	if err != nil {
+		return nil, err
+	}
+	err = s.service.Create(ctx, code, rate, req.RateDate.AsTime())
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +71,17 @@ func (s *CurrencyServer) Create(ctx context.Context, req *pb.Currency) (*pb.Curr
 }
 
 func (s *CurrencyServer) UpdateOne(ctx context.Context, req *pb.Currency) (*pb.Currency, error) {
-	err := s.service.UpdateOne(ctx, req.Code, req.Rate, req.RateDate.AsTime())
+	code, err := domain.ParseCurrencyCode(req.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	rate, err := domain.NewRate(req.Rate)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.service.UpdateOne(ctx, code, rate, req.RateDate.AsTime())
 	if err != nil {
 		return nil, err
 	}
@@ -81,19 +98,17 @@ func (s *CurrencyServer) SyncRates(ctx context.Context, req *pb.GetAllRequest) (
 	return s.GetAll(ctx, req)
 }
 
-func RunServer(service *service.CurrencyService) {
-	lis, err := net.Listen("tcp", ":50051")
+func RunServer(service *service.CurrencyService, port string) error {
+	addr := ":" + port
+
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		return fmt.Errorf("grpc listen %s: %w", addr, err)
 	}
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(service))
-
-	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
-
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	fmt.Println("GRPC LISTEN ON", ":"+port)
+	return grpcServer.Serve(lis)
 }

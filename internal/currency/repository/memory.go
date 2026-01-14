@@ -4,7 +4,6 @@ import (
 	"Currency-apiNew2/internal/currency/domain"
 	"context"
 	_ "math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,7 +18,7 @@ const (
 
 type CurrencyRepoInMemory struct {
 	mu     sync.RWMutex
-	data   map[string]domain.Currency
+	data   map[domain.CurrencyCode]domain.Currency
 	logger *zap.Logger
 }
 
@@ -28,46 +27,30 @@ type currencyRecord struct {
 	date time.Time
 }
 
-//func NewCurrencyRepoInMemory(logger *zap.Logger) *CurrencyRepoInMemory {
-//	now := time.Now()
-
-//	return &CurrencyRepoInMemory{
-//		data: map[string]domain.Currency{
-//			"USD": {Code: "USD", Rate: 80, RateDate: now},
-//			"EUR": {Code: "EUR", Rate: 85, RateDate: now},
-//			"AED": {Code: "AED", Rate: 20, RateDate: now},
-//		},
-//		logger: logger,
-//	}
-//}
-
 func NewCurrencyRepoInMemory(logger *zap.Logger) *CurrencyRepoInMemory {
 	return &CurrencyRepoInMemory{
-		data:   make(map[string]domain.Currency),
+		data:   make(map[domain.CurrencyCode]domain.Currency),
 		logger: logger,
 	}
 }
 
-func (r *CurrencyRepoInMemory) GetOne(ctx context.Context, code string) (domain.Currency, error) {
+func (r *CurrencyRepoInMemory) GetOne(ctx context.Context, code domain.CurrencyCode) (domain.Currency, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
-	code = strings.ToUpper(strings.TrimSpace(code))
 
 	c, ok := r.data[code]
 	if !ok {
 		return domain.Currency{}, domain.ErrNotFound
 	}
 
-	//r.logger.Debug("repo: Get success", zap.String("code", code), zap.Float64("rate", rec.rate))
 	return c, nil
 }
 
-func (r *CurrencyRepoInMemory) GetAll(ctx context.Context) (map[string]domain.Currency, error) {
+func (r *CurrencyRepoInMemory) GetAll(ctx context.Context) (map[domain.CurrencyCode]domain.Currency, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	res := make(map[string]domain.Currency, len(r.data))
+	res := make(map[domain.CurrencyCode]domain.Currency, len(r.data))
 	for k, v := range r.data {
 		res[k] = v
 	}
@@ -75,11 +58,10 @@ func (r *CurrencyRepoInMemory) GetAll(ctx context.Context) (map[string]domain.Cu
 	return res, nil
 }
 
-func (r *CurrencyRepoInMemory) Upsert(ctx context.Context, code string, rate float64, date time.Time) error {
+func (r *CurrencyRepoInMemory) Upsert(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	code = strings.ToUpper(code)
 	r.data[code] = domain.Currency{
 		Code:     code,
 		Rate:     rate,
@@ -89,17 +71,14 @@ func (r *CurrencyRepoInMemory) Upsert(ctx context.Context, code string, rate flo
 }
 
 // add new currency
-func (r *CurrencyRepoInMemory) Create(ctx context.Context, code string, rate float64, date time.Time) error {
+func (r *CurrencyRepoInMemory) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	code = strings.ToUpper(strings.TrimSpace(code))
 
 	if _, ok := r.data[code]; ok {
 		return domain.ErrAlreadyExists
 	}
 
-	//r.data[code] = domain.Currency{rate: rate, date: date}
 	r.data[code] = domain.Currency{
 		Code:     code,
 		Rate:     rate,
@@ -109,27 +88,24 @@ func (r *CurrencyRepoInMemory) Create(ctx context.Context, code string, rate flo
 }
 
 // update one currency
-func (r *CurrencyRepoInMemory) UpdateOne(ctx context.Context, code string, rate float64, date time.Time) error {
+func (r *CurrencyRepoInMemory) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	code = strings.ToUpper(strings.TrimSpace(code))
 
 	if _, ok := r.data[code]; !ok {
 		return domain.ErrNotFound
 	}
 
-	//r.data[code] = rate
-
-	cur, ok := r.data[code]
-	if !ok {
+	if _, ok := r.data[code]; !ok {
 		return domain.ErrNotFound
 	}
 
-	cur.Rate = rate
-	cur.RateDate = date
+	r.data[code] = domain.Currency{
+		Code:     code,
+		Rate:     rate,
+		RateDate: date,
+	}
 	return nil
-
 }
 
 // Update
@@ -151,7 +127,6 @@ func (r *CurrencyRepoInMemory) DeleteAll(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// clear map
-	r.data = make(map[string]domain.Currency)
+	r.data = make(map[domain.CurrencyCode]domain.Currency)
 	return nil
 }

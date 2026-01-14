@@ -1,26 +1,38 @@
 package provider
 
 import (
+	"Currency-apiNew2/internal/config"
 	"context"
 	"encoding/xml"
 	"fmt"
-	"golang.org/x/text/encoding/charmap"
 	"io"
 	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
 type CBRProvider struct {
 	client *http.Client
+	config *config.CBRConfig
 }
 
-func NewCBRProvider() *CBRProvider {
+func NewCBRProvider(cfg *config.CBRConfig) *CBRProvider {
+	if cfg == nil {
+		cfg = config.DefaultCBRConfig()
+	}
+
+	if cfg.URL == "" {
+		cfg.URL = "https://www.cbr.ru/scripts/XML_daily.asp"
+	}
+
 	return &CBRProvider{
+		config: cfg,
 		client: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: cfg.HTTPConfig.Timeout,
 		},
 	}
 }
@@ -38,130 +50,27 @@ type Valute struct {
 
 func (p *CBRProvider) GetRates(ctx context.Context) (map[string]float64, time.Time, error) {
 	return p.loadRates(ctx)
-	//req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.cbr.ru/scripts/XML_daily.asp", nil)
-	//resp, err := p.client.Do(req)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//defer resp.Body.Close()
-	//
-	//// Декодируем Windows-1251
-	//decoder := xml.NewDecoder(resp.Body)
-	//decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
-	//	if strings.EqualFold(charset, "windows-1251") {
-	//		return charmap.Windows1251.NewDecoder().Reader(input), nil
-	//	}
-	//	return nil, fmt.Errorf("unsupported charset: %s", charset)
-	//}
-	//
-	//var valCurs ValCurs
-	//if err := decoder.Decode(&valCurs); err != nil {
-	//	return nil, err
-	//}
-	//
-	//// валюты, которые нужны
-	//codes := map[string]bool{"USD": true, "EUR": true, "AED": true}
-	//result := make(map[string]float64)
-	//
-	//for _, v := range valCurs.Valutes {
-	//	if codes[v.CharCode] {
-	//		// заменить запятую на точку
-	//		valStr := strings.Replace(v.Value, ",", ".", 1)
-	//		val, _ := strconv.ParseFloat(valStr, 64)
-	//		// делим на номинал
-	//		result[v.CharCode] = val / float64(v.Nominal)
-	//	}
-	//}
-	//
-	//return result, nil
 }
 
 func (p *CBRProvider) ForceRefresh(ctx context.Context) (map[string]float64, time.Time, error) {
-	//return p.GetRates(ctx)
 	return p.loadRates(ctx)
 }
 
-//func (p *ExchangeRateHost) GetRates(ctx context.Context) (map[string]float64, error) {
-//	url := fmt.Sprintf("https://api.exchangerate.host/latest?base=%s",
-//		p.base,
-//	)
-//
-//	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	resp, err := p.client.Do(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer resp.Body.Close()
-//
-//	var result struct {
-//		Rates map[string]float64 `json:"rates"`
-//	}
-//
-//	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-//		return nil, err
-//	}
-//
-//	return result.Rates, nil
-//}
-
-//func (p *OpenERProvider) GetRates(ctx context.Context) (map[string]float64, error) {
-//	url := fmt.Sprintf("https://open.er-api.com/v6/latest/%s", p.base)
-//
-//	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	resp, err := p.client.Do(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	defer resp.Body.Close()
-//
-//	var result struct {
-//		Result string             `json:"result"` // "success" или "error"
-//		Rates  map[string]float64 `json:"rates"`
-//	}
-//
-//	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-//		return nil, err
-//	}
-//
-//	if result.Result != "success" || result.Rates == nil {
-//		return nil, fmt.Errorf("rates API returned no data")
-//	}
-//
-//	usdToRUB, ok := result.Rates["RUB"]
-//	if !ok {
-//		return nil, fmt.Errorf("RUB rate not found")
-//	}
-//
-//	// Старые InMemory значения для нормировки
-//	baseRates := map[string]float64{
-//		"USD": 80,
-//		"EUR": 85,
-//		"AED": 20,
-//	}
-//
-//	scale := usdToRUB / 80 // коэффициент пересчета
-//
-//	filtered := make(map[string]float64)
-//	for code, val := range baseRates {
-//		filtered[code] = val * scale
-//	}
-//
-//	return filtered, nil
-//}
-
 func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.Time, error) {
-	req, _ := http.NewRequestWithContext(ctx,
+	fmt.Printf("DEBUG: URL = %s\n", p.config.URL)
+	fmt.Printf("DEBUG: Required codes = %v\n", p.config.RequiredCodes)
+
+	req, err := http.NewRequestWithContext(
+		ctx,
 		http.MethodGet,
-		"https://www.cbr.ru/scripts/XML_daily.asp",
-		nil)
+		p.config.URL,
+		nil,
+	)
+	if err != nil {
+		fmt.Printf("DEBUG: Failed to create request: %v\n", err)
+
+		return nil, time.Time{}, fmt.Errorf("failed to create request: %w", err)
+	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
@@ -178,45 +87,58 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	}
 
 	var valCurs ValCurs
-
 	if err := decoder.Decode(&valCurs); err != nil {
 		return nil, time.Time{}, err
 	}
 
-	////
 	rateDate, err := time.Parse("02.01.2006", valCurs.Date)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
 
-	codes := map[string]bool{"USD": true, "EUR": true, "AED": true}
+	codes := make(map[string]bool)
+	for _, code := range p.config.RequiredCodes {
+		codes[code] = true
+	}
+
 	result := make(map[string]float64)
+	foundCurrencies := make(map[string]bool)
 
 	for _, v := range valCurs.Valutes {
-		if codes[v.CharCode] {
-
-			valStr := strings.TrimSpace(v.Value)
-			valStr = strings.Replace(valStr, ",", ".", 1)
-
-			val, err := strconv.ParseFloat(valStr, 64)
-			if err != nil {
-				return nil, time.Time{}, fmt.Errorf(
-					"failed to parse rate %s for %s",
-					v.Value,
-					v.CharCode,
-				)
-			}
-
-			if v.Nominal == 0 {
-				return nil, time.Time{}, fmt.Errorf("nominal is zero for %s", v.CharCode)
-			}
-
-			rate := val / float64(v.Nominal)
-			rate = round2(rate)
-
-			result[v.CharCode] = rate
+		if !codes[v.CharCode] {
+			continue
 		}
+
+		foundCurrencies[v.CharCode] = true
+
+		valStr := strings.TrimSpace(v.Value)
+		valStr = strings.Replace(valStr, ",", ".", 1)
+
+		val, err := strconv.ParseFloat(valStr, 64)
+		if err != nil {
+			return nil, time.Time{}, fmt.Errorf("failed to parse value for %s: %w", v.CharCode, err)
+		}
+
+		if v.Nominal == 0 {
+			return nil, time.Time{}, fmt.Errorf("nominal is zero for %s", v.CharCode)
+		}
+
+		rate := val / float64(v.Nominal)
+		rate = round2(rate)
+
+		result[v.CharCode] = rate
 	}
+
+	if len(foundCurrencies) != len(codes) {
+		missing := []string{}
+		for code := range codes {
+			if !foundCurrencies[code] {
+				missing = append(missing, code)
+			}
+		}
+		return nil, time.Time{}, fmt.Errorf("missing currencies: %v", missing)
+	}
+
 	return result, rateDate, nil
 }
 

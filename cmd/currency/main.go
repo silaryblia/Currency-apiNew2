@@ -1,36 +1,49 @@
 package main
 
 import (
+	"Currency-apiNew2/internal/config"
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
 	"Currency-apiNew2/internal/currency/transport/grpc"
-	_ "Currency-apiNew2/internal/currency/transport/http"
+	//_ "Currency-apiNew2/internal/currency/transport/http"
 	"Currency-apiNew2/pkg/logger"
 	_ "context"
+	"fmt"
 	"time"
 
+	"go.uber.org/zap"
 	_ "go.uber.org/zap"
 )
 
 func main() {
-	log := logger.New()
+	cfg, err := config.Load()
+	if err != nil {
+		//cfg := config.DefaultConfig()
+		panic(fmt.Sprintf("Failed to load config: %v", err))
+	}
+
+	log, err := logger.New(cfg.LogMode)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create logger: %v", err))
+	}
+	defer log.Sync()
 
 	// Базовый провайдер ЦБ РФ
-	baseProvider := provider.NewCBRProvider()
+	baseProvider := provider.NewCBRProvider(&cfg.CBR)
 
 	// Кеш на 24 часа
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
 
-	repo := repository.NewCurrencyRepoInMemory(log) // или Postgres
+	repo := repository.NewCurrencyRepoInMemory(log)
 
 	svc := service.NewCurrencyService(repo, cachedProvider)
 
-	grpc.RunServer(svc)
+	log.Info("starting gRPC server", zap.String("port", cfg.GRPCPort))
 
-	//srv := http.NewServer(log)
-	//if err := srv.Run(); err != nil {
-	//
-	//	log.Fatal("currency init failed", zap.Error(err))
-	//}
+	fmt.Println("CFG GRPC PORT =", cfg.GRPCPort)
+
+	if err := grpc.RunServer(svc, cfg.GRPCPort); err != nil {
+		log.Fatal("gRPC server failed", zap.Error(err))
+	}
 }
