@@ -4,6 +4,7 @@ import (
 	"Currency-apiNew2/internal/config"
 	_ "Currency-apiNew2/internal/config"
 	"Currency-apiNew2/internal/currency/domain"
+	"Currency-apiNew2/internal/currency/notification"
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
@@ -45,12 +46,12 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 
 	// Базовый провайдер ЦБ РФ
 	baseProvider := provider.NewCBRProvider(&cfg.CBR)
-
 	// Кеш на 24 часа
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
+	notificationSvc := notification.NewLoggerNotificationService(logger)
 
 	// В сервис передаём КЕШ
-	svc := service.NewCurrencyService(repo, cachedProvider)
+	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc)
 	r := NewRouter(svc, logger)
 
 	return &Server{router: r, logger: logger}, nil

@@ -6,4 +6,5 @@ var (
 	ErrNotFound      = errors.New("currency not found")
 	ErrAlreadyExists = errors.New("currency already exists")
 	ErrInvalidArg    = errors.New("invalid argument")
+	ErrValidation    = errors.New("validation error")
 )

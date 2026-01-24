@@ -88,19 +88,33 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.service.Create(r.Context(), code, rate, time.Now().UTC()); err != nil {
-		if err == domain.ErrAlreadyExists {
-			_ = WriteError(w, http.StatusConflict, "currency already exists")
-			return
+		status := HTTPStatusFromError(err)
+
+		if status == http.StatusInternalServerError {
+			h.logger.Error("create currency failed", zap.Error(err))
 		}
 
-		h.logger.Error("create currency failed", zap.Error(err))
-		_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		_ = WriteError(w, status, err.Error())
 		return
-	}
 
-	_ = WriteJSON(w, http.StatusCreated, map[string]string{
-		"status": "ok",
-	})
+		_ = WriteJSON(w, http.StatusCreated, map[string]string{
+			"status": "ok",
+		})
+		//
+		//	if err == domain.ErrAlreadyExists {
+		//		_ = WriteError(w, http.StatusConflict, "currency already exists")
+		//		return
+		//	}
+		//
+		//	h.logger.Error("create currency failed", zap.Error(err))
+		//	_ = WriteError(w, http.StatusInternalServerError, err.Error())
+		//	return
+		//}
+		//
+		//_ = WriteJSON(w, http.StatusCreated, map[string]string{
+		//	"status": "ok",
+		//})
+	}
 }
 
 func (h *Handler) UpdateOne(w http.ResponseWriter, r *http.Request) {

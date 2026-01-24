@@ -2,6 +2,7 @@ package main
 
 import (
 	"Currency-apiNew2/internal/config"
+	notification2 "Currency-apiNew2/internal/currency/notification"
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
@@ -29,15 +30,17 @@ func main() {
 	}
 	defer log.Sync()
 
+	repo := repository.NewCurrencyRepoInMemory(log)
+
 	// Базовый провайдер ЦБ РФ
 	baseProvider := provider.NewCBRProvider(&cfg.CBR)
 
 	// Кеш на 24 часа
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
 
-	repo := repository.NewCurrencyRepoInMemory(log)
+	notifications := notification2.NewLoggerNotificationService(log)
 
-	svc := service.NewCurrencyService(repo, cachedProvider)
+	svc := service.NewCurrencyService(repo, cachedProvider, notifications)
 
 	log.Info("starting gRPC server", zap.String("port", cfg.GRPCPort))
 
