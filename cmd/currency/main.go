@@ -7,6 +7,8 @@ import (
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
 	"Currency-apiNew2/internal/currency/transport/grpc"
+	"os"
+
 	//_ "Currency-apiNew2/internal/currency/transport/http"
 	"Currency-apiNew2/pkg/logger"
 	_ "context"
@@ -20,15 +22,18 @@ import (
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
-		//cfg := config.DefaultConfig()
-		panic(fmt.Sprintf("Failed to load config: %v", err))
+		fmt.Fprintf(os.Stderr, "config load failed: %v\n", err)
+		os.Exit(1)
 	}
 
 	log, err := logger.New(cfg.LogMode)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create logger: %v", err))
+		fmt.Fprintf(os.Stderr, "logger init failed: %v\n", err)
+		os.Exit(1)
 	}
 	defer log.Sync()
+
+	log.Info("config loaded successfully")
 
 	repo := repository.NewCurrencyRepoInMemory(log)
 
