@@ -76,7 +76,9 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {

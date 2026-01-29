@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"Currency-apiNew2/internal/currency/domain"
-	_ "Currency-apiNew2/internal/currency/domain"
 	pb "Currency-apiNew2/internal/currency/proto"
 	"Currency-apiNew2/internal/currency/service"
 	"context"

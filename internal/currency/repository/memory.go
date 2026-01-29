@@ -22,11 +22,6 @@ type CurrencyRepoInMemory struct {
 	logger *zap.Logger
 }
 
-type currencyRecord struct {
-	rate float64
-	date time.Time
-}
-
 func NewCurrencyRepoInMemory(logger *zap.Logger) *CurrencyRepoInMemory {
 	return &CurrencyRepoInMemory{
 		data:   make(map[domain.CurrencyCode]domain.Currency),

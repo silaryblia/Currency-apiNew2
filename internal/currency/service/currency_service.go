@@ -3,6 +3,7 @@ package service
 import (
 	"Currency-apiNew2/internal/currency/domain"
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -13,6 +14,7 @@ type CurrencyService struct {
 	provider      domain.RatesProvider
 	logger        *zap.Logger
 	notifications domain.NotificationService
+	mu            sync.RWMutex
 
 	rateSpikeThreshold float64
 	slowThreshold      time.Duration
@@ -22,15 +24,23 @@ func NewCurrencyService(
 	repo domain.CurrencyRepository,
 	provider domain.RatesProvider,
 	notifications domain.NotificationService,
+	logger *zap.Logger,
 ) *CurrencyService {
 	return &CurrencyService{
-		repo:          repo,
-		provider:      provider,
-		notifications: notifications,
+		repo:               repo,
+		provider:           provider,
+		notifications:      notifications,
+		rateSpikeThreshold: 0.1,                    // Например, 10%
+		slowThreshold:      100 * time.Millisecond, // 100ms
+		logger:             logger,
 	}
 }
 
 func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]domain.Currency, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	s.logger.Info("getting all currencies")
 	start := time.Now()
 
 	res, err := s.repo.GetAll(ctx)
@@ -42,10 +52,16 @@ func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]d
 }
 
 func (s *CurrencyService) GetOne(ctx context.Context, code domain.CurrencyCode) (domain.Currency, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.repo.GetOne(ctx, code)
 }
 
 func (s *CurrencyService) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if err := domain.ValidateCreateCurrency(code, rate); err != nil {
 		return err
 	}
@@ -54,6 +70,9 @@ func (s *CurrencyService) Create(ctx context.Context, code domain.CurrencyCode, 
 }
 
 func (s *CurrencyService) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	return s.repo.UpdateOne(ctx, code, rate, date)
 }
 
@@ -66,6 +85,9 @@ func (s *CurrencyService) DeleteAll(ctx context.Context) error {
 }
 
 func (s *CurrencyService) SyncRates(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	rawRates, rateDate, err := s.provider.ForceRefresh(ctx)
 	if err != nil {
 		return err

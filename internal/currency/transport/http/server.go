@@ -2,7 +2,6 @@ package http
 
 import (
 	"Currency-apiNew2/internal/config"
-	_ "Currency-apiNew2/internal/config"
 	"Currency-apiNew2/internal/currency/domain"
 	"Currency-apiNew2/internal/currency/notification"
 	"Currency-apiNew2/internal/currency/provider"
@@ -51,7 +50,7 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	notificationSvc := notification.NewLoggerNotificationService(logger)
 
 	// В сервис передаём КЕШ
-	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc)
+	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc, logger)
 	r := NewRouter(svc, logger)
 
 	return &Server{router: r, logger: logger}, nil

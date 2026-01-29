@@ -81,7 +81,9 @@ func (r *CurrencyRepoPostgres) GetAll(ctx context.Context) (map[domain.CurrencyC
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	result := make(map[domain.CurrencyCode]domain.Currency)
 

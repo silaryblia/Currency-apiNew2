@@ -6,6 +6,6 @@ import (
 )
 
 type NotificationService interface {
-	SlowOperation(ctx context.Context, name string, durationMs time.Duration)
+	SlowOperation(ctx context.Context, name string, duration time.Duration)
 	RateSpike(ctx context.Context, code CurrencyCode, oldRate, newRate Rate)
 }

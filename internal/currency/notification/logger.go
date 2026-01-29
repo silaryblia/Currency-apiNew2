@@ -19,11 +19,11 @@ func NewLoggerNotificationService(logger *zap.Logger) *LoggerNotificationService
 func (n *LoggerNotificationService) SlowOperation(
 	ctx context.Context,
 	name string,
-	durationMs time.Duration) {
+	duration time.Duration) {
 	n.logger.Warn(
 		"slow operation detected",
 		zap.String("operation", name),
-		zap.Duration("duration_ms", durationMs))
+		zap.Duration("duration_ms", duration))
 }
 
 func (n *LoggerNotificationService) RateSpike(

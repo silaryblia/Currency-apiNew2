@@ -95,25 +95,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_ = WriteError(w, status, err.Error())
-		return
 
 		_ = WriteJSON(w, http.StatusCreated, map[string]string{
 			"status": "ok",
 		})
-		//
-		//	if err == domain.ErrAlreadyExists {
-		//		_ = WriteError(w, http.StatusConflict, "currency already exists")
-		//		return
-		//	}
-		//
-		//	h.logger.Error("create currency failed", zap.Error(err))
-		//	_ = WriteError(w, http.StatusInternalServerError, err.Error())
-		//	return
-		//}
-		//
-		//_ = WriteJSON(w, http.StatusCreated, map[string]string{
-		//	"status": "ok",
-		//})
+		return
 	}
 }
 

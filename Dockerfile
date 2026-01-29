@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.25.6-alpine AS builder
 
 WORKDIR /app
 
@@ -18,6 +18,6 @@ COPY --from=builder /app/app .
 
 RUN apk --no-cache add tzdata ca-certificates
 
-EXPOSE 8081
+EXPOSE 50051
 
 CMD ["./app"]
