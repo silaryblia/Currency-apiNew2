@@ -97,7 +97,10 @@ func (s *CurrencyServer) SyncRates(ctx context.Context, req *pb.GetAllRequest) (
 	return s.GetAll(ctx, req)
 }
 
-func RunServer(service *service.CurrencyService, port string) error {
+func RunServer(
+	ctx context.Context,
+	service *service.CurrencyService,
+	port string) error {
 	addr := ":" + port
 
 	lis, err := net.Listen("tcp", addr)
@@ -108,6 +111,12 @@ func RunServer(service *service.CurrencyService, port string) error {
 	grpcServer := grpc.NewServer()
 	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(service))
 	reflection.Register(grpcServer)
+
+	go func() {
+		<-ctx.Done()
+		grpcServer.GracefulStop()
+	}()
+
 	fmt.Println("GRPC LISTEN ON", ":"+port)
 	return grpcServer.Serve(lis)
 }
