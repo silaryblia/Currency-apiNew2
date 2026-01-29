@@ -9,6 +9,7 @@ import (
 	"net"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -110,6 +111,7 @@ func RunServer(
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(service))
+	grpc_health_v1.RegisterHealthServer(grpcServer, NewHealthServer(service))
 	reflection.Register(grpcServer)
 
 	go func() {
@@ -117,6 +119,6 @@ func RunServer(
 		grpcServer.GracefulStop()
 	}()
 
-	fmt.Println("GRPC LISTEN ON", ":"+port)
+	fmt.Println("gRPC listening on", addr)
 	return grpcServer.Serve(lis)
 }

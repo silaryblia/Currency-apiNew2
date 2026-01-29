@@ -4,6 +4,7 @@ import (
 	"Currency-apiNew2/internal/currency/domain"
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/zap"
@@ -18,6 +19,7 @@ type CurrencyService struct {
 
 	rateSpikeThreshold float64
 	slowThreshold      time.Duration
+	ready              atomic.Bool
 }
 
 func NewCurrencyService(
@@ -121,4 +123,12 @@ func (s *CurrencyService) SyncRates(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *CurrencyService) SetReady() {
+	s.ready.Store(true)
+}
+
+func (s *CurrencyService) IsReady() bool {
+	return s.ready.Load()
 }
