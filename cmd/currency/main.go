@@ -9,7 +9,6 @@ import (
 	"Currency-apiNew2/internal/currency/transport/grpc"
 	"Currency-apiNew2/pkg/logger"
 	"context"
-	_ "context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -50,13 +49,14 @@ func main() {
 	svc := service.NewCurrencyService(repo, cachedProvider, notifications, log)
 
 	startCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	if err := svc.SyncRates(startCtx); err != nil {
+	defer cancel()
+
+	if err := svc.SyncRatesWithRetry(startCtx); err != nil {
 		log.Error("initial sync rates failed", zap.Error(err))
 	} else {
 		log.Info("initial sync rates completed")
 		svc.SetReady()
 	}
-	cancel()
 
 	go service.StartRatesScheduler(ctx, log, svc, 24*time.Hour)
 

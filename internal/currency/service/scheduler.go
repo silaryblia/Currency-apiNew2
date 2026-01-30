@@ -13,24 +13,21 @@ func StartRatesScheduler(
 	svc *CurrencyService,
 	interval time.Duration) {
 	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
-	go func() {
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				log.Info("scheduled rates sync started")
-				if err := svc.SyncRates(ctx); err != nil {
-					log.Error("scheduled rates sync failed", zap.Error(err))
-				} else {
-					log.Info("scheduled rates sync finished")
-				}
-
-			case <-ctx.Done():
-				log.Info("rates scheduler stopped")
-				return
+	for {
+		select {
+		case <-ticker.C:
+			log.Info("scheduled rates sync started")
+			if err := svc.SyncRatesWithRetry(ctx); err != nil {
+				log.Error("scheduled rates sync failed", zap.Error(err))
+			} else {
+				log.Info("scheduled rates sync finished")
 			}
+
+		case <-ctx.Done():
+			log.Info("rates scheduler stopped")
+			return
 		}
-	}()
+	}
 }
