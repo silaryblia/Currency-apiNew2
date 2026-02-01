@@ -49,14 +49,14 @@ func (r *CurrencyRepoPostgres) GetOne(
 	code domain.CurrencyCode) (domain.Currency, error) {
 
 	var c domain.Currency
-	var rate float64
-	var codeStr string
+	var rateStr string
+	var rateDate time.Time
 
 	err := r.db.QueryRowContext(ctx, `
 		SELECT code, rate, rate_date
 		FROM currencies
 		WHERE code = $1
-	`, code.String()).Scan(&codeStr, &rate, &c.RateDate)
+	`, code.String()).Scan(&c.Code, &rateStr, &rateDate)
 
 	if err == sql.ErrNoRows {
 		return domain.Currency{}, domain.ErrNotFound
@@ -66,8 +66,14 @@ func (r *CurrencyRepoPostgres) GetOne(
 		return domain.Currency{}, err
 	}
 
-	c.Code = domain.CurrencyCode(codeStr)
-	c.Rate = domain.Rate(rate)
+	// Конвертируем строку в Rate
+	rate, err := domain.RateFromString(rateStr)
+	if err != nil {
+		return domain.Currency{}, fmt.Errorf("failed to parse rate: %w", err)
+	}
+
+	c.Rate = rate
+	c.RateDate = rateDate
 
 	return c, nil
 }
@@ -89,15 +95,25 @@ func (r *CurrencyRepoPostgres) GetAll(ctx context.Context) (map[domain.CurrencyC
 
 	for rows.Next() {
 		var c domain.Currency
-		var codeStr string
-		var rate float64
+		var rateStr string
+		var rateDate time.Time
 
-		if err := rows.Scan(&codeStr, &rate, &c.RateDate); err != nil {
+		if err := rows.Scan(&c.Code, &rateStr, &rateDate); err != nil {
 			return nil, err
 		}
 
-		c.Code = domain.CurrencyCode(codeStr)
-		c.Rate = domain.Rate(rate)
+		// Конвертируем строку в Rate
+		rate, err := domain.RateFromString(rateStr)
+		if err != nil {
+			r.logger.Error("failed to parse rate",
+				zap.String("code", string(c.Code)),
+				zap.String("rate", rateStr),
+				zap.Error(err))
+			continue
+		}
+
+		c.Rate = rate
+		c.RateDate = rateDate
 		result[c.Code] = c
 	}
 

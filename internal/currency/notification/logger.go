@@ -31,12 +31,18 @@ func (n *LoggerNotificationService) RateSpike(
 	code domain.CurrencyCode,
 	oldRate, newRate domain.Rate) {
 
-	changePercent := (float64(newRate-oldRate) / float64(oldRate)) * 100
+	oldRateFloat := oldRate.Float64()
+	newRateFloat := newRate.Float64()
+
+	var changePercent float64
+	if oldRateFloat != 0 {
+		changePercent = ((newRateFloat - oldRateFloat) / oldRateFloat) * 100
+	}
 
 	n.logger.Warn(
 		"rate spike detected",
-		zap.String("code", code.String()),
-		zap.Float64("old_rate", float64(oldRate)),
-		zap.Float64("new_rate", float64(newRate)),
+		zap.String("code", string(code)), // код валюты это строка
+		zap.Float64("old_rate", oldRateFloat),
+		zap.Float64("new_rate", newRateFloat),
 		zap.Float64("change_percent", changePercent))
 }

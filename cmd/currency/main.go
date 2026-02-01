@@ -44,7 +44,7 @@ func main() {
 
 	repo := repository.NewCurrencyRepoInMemory(log)
 	baseProvider := provider.NewCBRProvider(&cfg.CBR)
-	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
+	cachedProvider := provider.NewCachedProvider(baseProvider, 1*time.Hour)
 	notifications := notification.NewLoggerNotificationService(log)
 	svc := service.NewCurrencyService(repo, cachedProvider, notifications, log)
 

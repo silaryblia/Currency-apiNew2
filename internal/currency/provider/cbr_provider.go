@@ -57,18 +57,8 @@ func (p *CBRProvider) ForceRefresh(ctx context.Context) (map[string]float64, tim
 }
 
 func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.Time, error) {
-	fmt.Printf("DEBUG: URL = %s\n", p.config.URL)
-	fmt.Printf("DEBUG: Required codes = %v\n", p.config.RequiredCodes)
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		p.config.URL,
-		nil,
-	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.config.URL, nil)
 	if err != nil {
-		fmt.Printf("DEBUG: Failed to create request: %v\n", err)
-
 		return nil, time.Time{}, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -76,9 +66,7 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer resp.Body.Close()
 
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
@@ -115,6 +103,7 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 
 		valStr := strings.TrimSpace(v.Value)
 		valStr = strings.Replace(valStr, ",", ".", 1)
+		valStr = strings.ReplaceAll(valStr, " ", "")
 
 		val, err := strconv.ParseFloat(valStr, 64)
 		if err != nil {
@@ -126,8 +115,6 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 		}
 
 		rate := val / float64(v.Nominal)
-		rate = round2(rate)
-
 		result[v.CharCode] = rate
 	}
 
@@ -140,6 +127,9 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 		}
 		return nil, time.Time{}, fmt.Errorf("missing currencies: %v", missing)
 	}
+
+	// RUB всегда 1.0
+	//result["RUB"] = 1.0
 
 	return result, rateDate, nil
 }
