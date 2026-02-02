@@ -4,7 +4,6 @@ import (
 	"Currency-apiNew2/internal/currency/domain"
 	"Currency-apiNew2/internal/currency/retry"
 	"context"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -16,11 +15,10 @@ type CurrencyService struct {
 	provider      domain.RatesProvider
 	logger        *zap.Logger
 	notifications domain.NotificationService
-	mu            sync.RWMutex
+	//mu            sync.RWMutex
 
-	rateSpikeThreshold float64
-	slowThreshold      time.Duration
-	ready              atomic.Bool
+	notifyCfg domain.NotificationConfig
+	ready     atomic.Bool
 }
 
 func NewCurrencyService(
@@ -28,14 +26,14 @@ func NewCurrencyService(
 	provider domain.RatesProvider,
 	notifications domain.NotificationService,
 	logger *zap.Logger,
+	notifyCfg domain.NotificationConfig,
 ) *CurrencyService {
 	return &CurrencyService{
-		repo:               repo,
-		provider:           provider,
-		notifications:      notifications,
-		rateSpikeThreshold: 0.1,                    // 10%
-		slowThreshold:      100 * time.Millisecond, // 100ms
-		logger:             logger,
+		repo:          repo,
+		provider:      provider,
+		notifications: notifications,
+		notifyCfg:     notifyCfg,
+		logger:        logger,
 	}
 }
 
@@ -45,7 +43,7 @@ func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]d
 
 	res, err := s.repo.GetAll(ctx)
 	elapsed := time.Since(start)
-	if elapsed > s.slowThreshold {
+	if elapsed > s.notifyCfg.SlowThresold {
 		s.notifications.SlowOperation(ctx, "CurrencyService.GetAll", elapsed)
 	}
 	return res, err
@@ -103,7 +101,7 @@ func (s *CurrencyService) SyncRates(ctx context.Context) error {
 				if diff < 0 {
 					diff = -diff
 				}
-				if diff >= s.rateSpikeThreshold {
+				if diff >= s.notifyCfg.RateSpikeThreshold {
 					s.notifications.RateSpike(ctx, code, old.Rate, newRate)
 				}
 			}
