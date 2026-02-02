@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -66,7 +65,8 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
+	//defer resp.Body.Close()
 
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
@@ -134,6 +134,6 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	return result, rateDate, nil
 }
 
-func round2(v float64) float64 {
-	return math.Round(v*100) / 100
-}
+//func round2(v float64) float64 {
+//	return math.Round(v*100) / 100
+//}

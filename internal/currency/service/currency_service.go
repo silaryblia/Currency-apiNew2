@@ -49,30 +49,6 @@ func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]d
 	return res, err
 }
 
-func (s *CurrencyService) GetOne(ctx context.Context, code domain.CurrencyCode) (domain.Currency, error) {
-	return s.repo.GetOne(ctx, code)
-}
-
-func (s *CurrencyService) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-	if err := domain.ValidateCreateCurrency(code, rate); err != nil {
-		return err
-	}
-
-	return s.repo.Create(ctx, code, rate, date)
-}
-
-func (s *CurrencyService) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-	return s.repo.UpdateOne(ctx, code, rate, date)
-}
-
-func (s *CurrencyService) UpdateAll(ctx context.Context) error {
-	return s.repo.UpdateAll(ctx)
-}
-
-func (s *CurrencyService) DeleteAll(ctx context.Context) error {
-	return s.repo.DeleteAll(ctx)
-}
-
 func (s *CurrencyService) SyncRates(ctx context.Context) error {
 	rawRates, rateDate, err := s.provider.ForceRefresh(ctx)
 	if err != nil {
@@ -92,27 +68,28 @@ func (s *CurrencyService) SyncRates(ctx context.Context) error {
 			continue
 		}
 
-		old, err := s.repo.GetOne(ctx, code)
+		old, err := s.repo.GetLatest(ctx, code)
 		if err == nil {
-			oldRateFloat := old.Rate.Float64()
-			if oldRateFloat > 0 {
-				newRateFloat := newRate.Float64()
-				diff := (newRateFloat - oldRateFloat) / oldRateFloat
-				if diff < 0 {
-					diff = -diff
-				}
-				if diff >= s.notifyCfg.RateSpikeThreshold {
-					s.notifications.RateSpike(ctx, code, old.Rate, newRate)
-				}
+			diff := newRate.Diff(old.Rate)
+			if diff >= s.notifyCfg.RateSpikeThreshold {
+				s.notifications.RateSpike(ctx, code, old.Rate, newRate)
 			}
 		}
-
-		if err := s.repo.Upsert(ctx, code, newRate, rateDate); err != nil {
-			s.logger.Error("failed to upsert", zap.String("code", rawCode), zap.Error(err))
+		if err := s.repo.SaveRate(ctx, code, newRate, rateDate); err != nil {
+			s.logger.Error("save rate failed",
+				zap.String("code", rawCode),
+				zap.Error(err))
 			continue
 		}
 	}
 	return nil
+}
+
+func (s *CurrencyService) GetLatest(
+	ctx context.Context,
+	code domain.CurrencyCode,
+) (domain.Currency, error) {
+	return s.repo.GetLatest(ctx, code)
 }
 
 func (s *CurrencyService) SetReady() {
@@ -133,3 +110,28 @@ func (s *CurrencyService) SyncRatesWithRetry(ctx context.Context) error {
 			return s.SyncRates(ctx)
 		})
 }
+
+//
+//func (s *CurrencyService) GetOne(ctx context.Context, code domain.CurrencyCode) (domain.Currency, error) {
+//	return s.repo.GetOne(ctx, code)
+//}
+//
+//func (s *CurrencyService) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
+//	if err := domain.ValidateCreateCurrency(code, rate); err != nil {
+//		return err
+//	}
+//
+//	return s.repo.Create(ctx, code, rate, date)
+//}
+//
+//func (s *CurrencyService) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
+//	return s.repo.UpdateOne(ctx, code, rate, date)
+//}
+//
+//func (s *CurrencyService) UpdateAll(ctx context.Context) error {
+//	return s.repo.UpdateAll(ctx)
+//}
+//
+//func (s *CurrencyService) DeleteAll(ctx context.Context) error {
+//	return s.repo.DeleteAll(ctx)
+//}

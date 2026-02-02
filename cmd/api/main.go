@@ -26,7 +26,12 @@ func main() {
 	}
 
 	go app.RunScheduler(ctx)
-	go grpc.RunServer(ctx, app.Service, app.Config.GRPCPort)
+	go func() {
+		if err := grpc.RunServer(ctx, app.Service, app.Config.GRPCPort); err != nil {
+			app.Logger.Error("gRPC server error", zap.Error(err))
+		}
+	}()
+	//go grpc.RunServer(ctx, app.Service, app.Config.GRPCPort)
 
 	<-ctx.Done()
 	app.Logger.Info("API service stopped")

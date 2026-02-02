@@ -20,10 +20,5 @@ func NewRouter(svc *service.CurrencyService, logger *zap.Logger) *mux.Router {
 
 	api.HandleFunc("/currencies/sync", h.SyncRates).Methods("POST")
 	api.HandleFunc("/currencies", h.GetAll).Methods("GET")
-	api.HandleFunc("/currencies/{code}", h.GetOne).Methods("GET")
-	api.HandleFunc("/currencies/{code}", h.Create).Methods("POST")
-	api.HandleFunc("/currencies/{code}", h.UpdateOne).Methods("PUT")
-	api.HandleFunc("/currencies", h.DeleteAll).Methods("DELETE")
-
 	return r
 }

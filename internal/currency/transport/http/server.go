@@ -49,8 +49,13 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
 	notificationSvc := notification.NewLoggerNotificationService(logger)
 
+	notifyCfg := domain.NotificationConfig{
+		RateSpikeThreshold: 0.1,                    // 10%
+		SlowThresold:       100 * time.Millisecond, // 100ms
+	}
+
 	// В сервис передаём КЕШ
-	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc, logger)
+	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc, logger, notifyCfg)
 	r := NewRouter(svc, logger)
 
 	return &Server{router: r, logger: logger}, nil
