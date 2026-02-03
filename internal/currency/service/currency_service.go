@@ -111,27 +111,18 @@ func (s *CurrencyService) SyncRatesWithRetry(ctx context.Context) error {
 		})
 }
 
-//
-//func (s *CurrencyService) GetOne(ctx context.Context, code domain.CurrencyCode) (domain.Currency, error) {
-//	return s.repo.GetOne(ctx, code)
-//}
-//
-//func (s *CurrencyService) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-//	if err := domain.ValidateCreateCurrency(code, rate); err != nil {
-//		return err
-//	}
-//
-//	return s.repo.Create(ctx, code, rate, date)
-//}
-//
-//func (s *CurrencyService) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-//	return s.repo.UpdateOne(ctx, code, rate, date)
-//}
-//
-//func (s *CurrencyService) UpdateAll(ctx context.Context) error {
-//	return s.repo.UpdateAll(ctx)
-//}
-//
-//func (s *CurrencyService) DeleteAll(ctx context.Context) error {
-//	return s.repo.DeleteAll(ctx)
-//}
+func (s *CurrencyService) GetAtDate(
+	ctx context.Context,
+	code domain.CurrencyCode,
+	date time.Time,
+) (domain.Currency, error) {
+	return s.repo.GetAtDate(ctx, code, date)
+}
+
+func (s *CurrencyService) GetRange(
+	ctx context.Context,
+	code domain.CurrencyCode,
+	from, to time.Time,
+) ([]domain.Currency, error) {
+	return s.repo.GetRange(ctx, code, from, to)
+}

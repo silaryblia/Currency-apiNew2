@@ -128,6 +128,7 @@ func (r *CurrencyRepoInMemory) SaveRate(
 	code domain.CurrencyCode,
 	rate domain.Rate,
 	date time.Time) error {
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -147,23 +148,41 @@ func (r *CurrencyRepoInMemory) GetLatest(
 	ctx context.Context,
 	code domain.CurrencyCode,
 ) (domain.Currency, error) {
-	return r.GetOne(ctx, code)
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	c, ok := r.latest[code]
+	if !ok {
+		return domain.Currency{}, domain.ErrNotFound
+	}
+	return c, nil
 }
 
 func (r *CurrencyRepoInMemory) GetAtDate(
 	ctx context.Context,
 	code domain.CurrencyCode,
 	date time.Time) (domain.Currency, error) {
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	h := r.history[code]
 	for _, c := range h {
-		if c.RateDate.Equal(date) {
+		//if c.RateDate.Equal(date) {
+		//	return c, nil
+		//}
+		if sameDay(c.RateDate, date) {
 			return c, nil
 		}
 	}
 	return domain.Currency{}, domain.ErrNotFound
+}
+
+func sameDay(a, b time.Time) bool {
+	y1, m1, d1 := a.Date()
+	y2, m2, d2 := b.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
 }
 
 func (r *CurrencyRepoInMemory) GetRange(
@@ -171,6 +190,7 @@ func (r *CurrencyRepoInMemory) GetRange(
 	code domain.CurrencyCode,
 	from, to time.Time,
 ) ([]domain.Currency, error) {
+
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
