@@ -10,7 +10,7 @@ import (
 func ToProtoCurrency(c domain.Currency) *pb.Currency {
 	return &pb.Currency{
 		Code:     c.Code.String(),
-		Rate:     c.Rate.Float64(),
+		Rate:     c.Rate.String(),
 		RateDate: timestamppb.New(c.RateDate),
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -50,10 +51,13 @@ func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]d
 }
 
 func (s *CurrencyService) SyncRates(ctx context.Context) error {
+
 	rawRates, rateDate, err := s.provider.ForceRefresh(ctx)
 	if err != nil {
 		return err
 	}
+
+	threshold := decimal.NewFromFloat(s.notifyCfg.RateSpikeThreshold)
 
 	for rawCode, rawRate := range rawRates {
 		code, err := domain.ParseCurrencyCode(rawCode)
@@ -71,7 +75,7 @@ func (s *CurrencyService) SyncRates(ctx context.Context) error {
 		old, err := s.repo.GetLatest(ctx, code)
 		if err == nil {
 			diff := newRate.Diff(old.Rate)
-			if diff >= s.notifyCfg.RateSpikeThreshold {
+			if diff.GreaterThanOrEqual(threshold) {
 				s.notifications.RateSpike(ctx, code, old.Rate, newRate)
 			}
 		}
@@ -79,7 +83,6 @@ func (s *CurrencyService) SyncRates(ctx context.Context) error {
 			s.logger.Error("save rate failed",
 				zap.String("code", rawCode),
 				zap.Error(err))
-			continue
 		}
 	}
 	return nil

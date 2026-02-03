@@ -87,17 +87,13 @@ func (r Rate) IsPositive() bool {
 	return r.GreaterThan(decimal.Zero)
 }
 
-func (r Rate) Diff(other Rate) float64 {
-	a := r.Float64()
-	b := other.Float64()
-
-	if b == 0 {
-		return 0
+func (r Rate) Diff(other Rate) decimal.Decimal {
+	if other.IsZero() {
+		return decimal.Zero
 	}
 
-	diff := (a - b) / b
-	if diff < 0 {
-		diff = -diff
-	}
-	return diff
+	return r.
+		Sub(other.Decimal).
+		Abs().
+		Div(other.Decimal)
 }
