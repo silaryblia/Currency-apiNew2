@@ -44,7 +44,7 @@ func (s *CurrencyService) GetAll(ctx context.Context) (map[domain.CurrencyCode]d
 
 	res, err := s.repo.GetAll(ctx)
 	elapsed := time.Since(start)
-	if elapsed > s.notifyCfg.SlowThresold {
+	if elapsed > s.notifyCfg.SlowThreshold {
 		s.notifications.SlowOperation(ctx, "CurrencyService.GetAll", elapsed)
 	}
 	return res, err

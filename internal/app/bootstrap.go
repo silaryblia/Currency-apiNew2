@@ -2,7 +2,6 @@ package app
 
 import (
 	"Currency-apiNew2/internal/config"
-	"Currency-apiNew2/internal/currency/service"
 	"Currency-apiNew2/pkg/logger"
 	"context"
 	"fmt"
@@ -35,20 +34,28 @@ func (a *App) Init(ctx context.Context) error {
 	defer cancel()
 
 	if err := a.Service.SyncRatesWithRetry(ctx); err != nil {
-		return err
+		a.Logger.Error("initial rates sync failed", zap.Error(err))
 	}
 
+	////////////////
 	a.Service.SetReady()
 	return nil
 }
 
 func (a *App) RunScheduler(ctx context.Context) {
-	service.StartRatesScheduler(
-		ctx,
-		a.Logger,
-		a.Service,
-		24*time.Hour,
-	)
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_ = a.Gateway.SyncRates(ctx)
+			}
+		}
+	}()
 }
 
 func (a *App) Shutdown() {

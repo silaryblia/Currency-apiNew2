@@ -2,8 +2,8 @@ package grpc
 
 import (
 	"Currency-apiNew2/internal/currency/domain"
+	"Currency-apiNew2/internal/currency/gateway"
 	pb "Currency-apiNew2/internal/currency/proto"
-	"Currency-apiNew2/internal/currency/service"
 	"context"
 
 	"go.uber.org/zap"
@@ -13,16 +13,16 @@ import (
 
 type CurrencyHandler struct {
 	pb.UnimplementedCurrencyServiceServer
-	service *service.CurrencyService
+	gateway gateway.CurrencyGateway
 	logger  *zap.Logger
 }
 
 func NewCurrencyHandler(
-	svc *service.CurrencyService,
+	gw gateway.CurrencyGateway,
 	logger *zap.Logger,
 ) *CurrencyHandler {
 	return &CurrencyHandler{
-		service: svc,
+		gateway: gw,
 		logger:  logger,
 	}
 }
@@ -43,12 +43,7 @@ func (h *CurrencyHandler) GetAtDate(
 	req *pb.GetAtDateRequest,
 ) (*pb.GetOneResponse, error) {
 
-	code, err := domain.ParseCurrencyCode(req.Code)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	c, err := h.service.GetAtDate(ctx, code, req.Date.AsTime())
+	c, err := h.gateway.GetAtDate(ctx, req.Code, req.Date.AsTime())
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -63,14 +58,9 @@ func (h *CurrencyHandler) GetRange(
 	req *pb.GetRangeRequest,
 ) (*pb.GetRangeResponse, error) {
 
-	code, err := domain.ParseCurrencyCode(req.Code)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	items, err := h.service.GetRange(
+	items, err := h.gateway.GetRange(
 		ctx,
-		code,
+		req.Code,
 		req.From.AsTime(),
 		req.To.AsTime(),
 	)
@@ -84,4 +74,19 @@ func (h *CurrencyHandler) GetRange(
 	}
 
 	return &pb.GetRangeResponse{Currencies: res}, nil
+}
+
+func (h *CurrencyHandler) GetLatest(
+	ctx context.Context,
+	req *pb.GetOneRequest,
+) (*pb.GetOneResponse, error) {
+
+	c, err := h.gateway.GetLatest(ctx, req.Code)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	return &pb.GetOneResponse{
+		Currency: ToProtoCurrency(c),
+	}, nil
 }

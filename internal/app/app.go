@@ -3,6 +3,7 @@ package app
 import (
 	"Currency-apiNew2/internal/config"
 	"Currency-apiNew2/internal/currency/domain"
+	"Currency-apiNew2/internal/currency/gateway"
 	"Currency-apiNew2/internal/currency/notification"
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
@@ -14,13 +15,15 @@ import (
 
 type App struct {
 	Logger  *zap.Logger
-	Service *service.CurrencyService
+	Gateway gateway.CurrencyGateway
 	Config  *config.Config
+	Service *service.CurrencyService
 }
 
 func BuildApp() *App {
 	cfg := MustLoadConfig()
 	log := MustInitLogger(cfg.LogMode)
+
 	repo := repository.NewCurrencyRepoInMemory(log)
 
 	baseProvider := provider.NewCBRProvider(&cfg.CBR)
@@ -33,15 +36,15 @@ func BuildApp() *App {
 		cachedProvider,
 		notifications,
 		log,
-		domain.NotificationConfig{
-			RateSpikeThreshold: 0.1,
-			SlowThresold:       100 * time.Millisecond,
-		},
+		domain.DefaultNotificationConfig(),
 	)
+
+	gw := gateway.NewCurrencyGateway(svc, log)
 
 	return &App{
 		Logger:  log,
-		Service: svc,
+		Gateway: gw,
 		Config:  cfg,
+		Service: svc,
 	}
 }

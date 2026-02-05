@@ -56,17 +56,44 @@ func (p *CBRProvider) ForceRefresh(ctx context.Context) (map[string]float64, tim
 }
 
 func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.Time, error) {
+
+	if len(p.config.RequiredCodes) == 0 {
+		return nil, time.Time{}, fmt.Errorf("no required currencies configured")
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.config.URL, nil)
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("failed to create request: %w", err)
 	}
+
+	req.Header.Set(
+		"User-Agent",
+		"Mozilla/5.0 (compatible; CurrencyService/1.0; +https://example.com)",
+	)
+	req.Header.Set(
+		"Accept",
+		"application/xml,text/xml;q=0.9,*/*;q=0.8",
+	)
+	req.Header.Set(
+		"Accept-Language",
+		"ru-RU,ru;q=0.9,en;q=0.8",
+	)
 
 	resp, err := p.client.Do(req)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	//defer resp.Body.Close()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, time.Time{}, fmt.Errorf(
+			"CBR bad status: %d, body: %s",
+			resp.StatusCode,
+			string(body),
+		)
+	}
 
 	decoder := xml.NewDecoder(resp.Body)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {

@@ -1,13 +1,17 @@
 package config
 
-import "time"
+import (
+	"Currency-apiNew2/internal/currency/domain"
+	"time"
+)
 
 type Config struct {
-	UsePostgres bool
-	PostgresDSN string
-	HTTPPort    string
-	GRPCPort    string
-	LogMode     string
+	UsePostgres  bool
+	PostgresDSN  string
+	HTTPPort     string
+	GRPCPort     string
+	LogMode      string
+	Notification domain.NotificationConfig
 
 	CBR CBRConfig `yaml:"cbr"`
 }

@@ -48,10 +48,9 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	// Кеш на 24 часа
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
 	notificationSvc := notification.NewLoggerNotificationService(logger)
-
 	notifyCfg := domain.NotificationConfig{
 		RateSpikeThreshold: 0.1,                    // 10%
-		SlowThresold:       100 * time.Millisecond, // 100ms
+		SlowThreshold:      100 * time.Millisecond, // 100ms
 	}
 
 	// В сервис передаём КЕШ
