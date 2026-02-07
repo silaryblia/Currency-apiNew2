@@ -27,7 +27,7 @@ func main() {
 
 	go app.RunScheduler(ctx)
 	go func() {
-		if err := grpc.RunServer(ctx, app.Service, app.Config.GRPCPort); err != nil {
+		if err := grpc.RunServer(ctx, app.Gateway, app.Config.GRPCPort); err != nil {
 			app.Logger.Error("gRPC server error", zap.Error(err))
 		}
 	}()

@@ -84,7 +84,7 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 		return nil, time.Time{}, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	defer resp.Body.Close()
+	//defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)

@@ -30,15 +30,14 @@ func MustInitLogger(mode string) *zap.Logger {
 }
 
 func (a *App) Init(ctx context.Context) error {
+
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := a.Service.SyncRatesWithRetry(ctx); err != nil {
+	if err := a.Gateway.SyncRates(ctx); err != nil {
 		a.Logger.Error("initial rates sync failed", zap.Error(err))
 	}
 
-	////////////////
-	a.Service.SetReady()
 	return nil
 }
 

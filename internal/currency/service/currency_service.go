@@ -16,10 +16,8 @@ type CurrencyService struct {
 	provider      domain.RatesProvider
 	logger        *zap.Logger
 	notifications domain.NotificationService
-	//mu            sync.RWMutex
-
-	notifyCfg domain.NotificationConfig
-	ready     atomic.Bool
+	notifyCfg     domain.NotificationConfig
+	ready         atomic.Bool
 }
 
 func NewCurrencyService(

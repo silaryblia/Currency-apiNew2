@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	"Currency-apiNew2/internal/currency/service"
+	"Currency-apiNew2/internal/currency/gateway"
 	"context"
 
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -9,25 +9,26 @@ import (
 
 type HealthServer struct {
 	grpc_health_v1.UnimplementedHealthServer
-	svc *service.CurrencyService
+	gateway gateway.CurrencyGateway
 }
 
-func NewHealthServer(svc *service.CurrencyService) *HealthServer {
-	return &HealthServer{svc: svc}
+func NewHealthServer(gw gateway.CurrencyGateway) *HealthServer {
+	return &HealthServer{gateway: gw}
 }
 
 func (h *HealthServer) Check(
 	ctx context.Context,
-	req *grpc_health_v1.HealthCheckRequest,
+	_ *grpc_health_v1.HealthCheckRequest,
 ) (*grpc_health_v1.HealthCheckResponse, error) {
-	if h.svc.IsReady() {
+
+	if !h.gateway.IsReady() {
 		return &grpc_health_v1.HealthCheckResponse{
-			Status: grpc_health_v1.HealthCheckResponse_SERVING,
+			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
 		}, nil
 	}
 
 	return &grpc_health_v1.HealthCheckResponse{
-		Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+		Status: grpc_health_v1.HealthCheckResponse_SERVING,
 	}, nil
 }
 

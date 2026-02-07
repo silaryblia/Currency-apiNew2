@@ -17,7 +17,7 @@ type App struct {
 	Logger  *zap.Logger
 	Gateway gateway.CurrencyGateway
 	Config  *config.Config
-	Service *service.CurrencyService
+	//Service *service.CurrencyService
 }
 
 func BuildApp() *App {
@@ -45,6 +45,6 @@ func BuildApp() *App {
 		Logger:  log,
 		Gateway: gw,
 		Config:  cfg,
-		Service: svc,
+		//	Service: svc,
 	}
 }

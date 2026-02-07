@@ -1,9 +1,8 @@
 package grpc
 
 import (
-	"Currency-apiNew2/internal/currency/domain"
+	"Currency-apiNew2/internal/currency/gateway"
 	pb "Currency-apiNew2/internal/currency/proto"
-	"Currency-apiNew2/internal/currency/service"
 	"context"
 	"fmt"
 	"net"
@@ -15,19 +14,19 @@ import (
 
 type CurrencyServer struct {
 	pb.UnimplementedCurrencyServiceServer
-	service *service.CurrencyService
+	gateway gateway.CurrencyGateway
 }
 
-func NewCurrencyServer(service *service.CurrencyService) *CurrencyServer {
-	return &CurrencyServer{service: service}
+func NewCurrencyServer(gw gateway.CurrencyGateway) *CurrencyServer {
+	return &CurrencyServer{gateway: gw}
 }
 
 func (s *CurrencyServer) GetAll(
 	ctx context.Context,
-	req *pb.GetAllRequest,
+	_ *pb.GetAllRequest,
 ) (*pb.GetAllResponse, error) {
 
-	currencies, err := s.service.GetAll(ctx)
+	currencies, err := s.gateway.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +35,7 @@ func (s *CurrencyServer) GetAll(
 }
 
 func (s *CurrencyServer) SyncRates(ctx context.Context, req *pb.GetAllRequest) (*pb.GetAllResponse, error) {
-	err := s.service.SyncRates(ctx)
+	err := s.gateway.SyncRates(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +48,7 @@ func (s *CurrencyServer) GetLatest(
 	req *pb.GetOneRequest,
 ) (*pb.GetOneResponse, error) {
 
-	code, err := domain.ParseCurrencyCode(req.Code)
-	if err != nil {
-		return nil, err
-	}
-
-	currency, err := s.service.GetLatest(ctx, code)
+	currency, err := s.gateway.GetLatest(ctx, req.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -66,8 +60,9 @@ func (s *CurrencyServer) GetLatest(
 
 func RunServer(
 	ctx context.Context,
-	service *service.CurrencyService,
+	gateway gateway.CurrencyGateway,
 	port string) error {
+
 	addr := ":" + port
 
 	lis, err := net.Listen("tcp", addr)
@@ -76,8 +71,8 @@ func RunServer(
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(service))
-	grpc_health_v1.RegisterHealthServer(grpcServer, NewHealthServer(service))
+	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(gateway))
+	grpc_health_v1.RegisterHealthServer(grpcServer, NewHealthServer(gateway))
 	reflection.Register(grpcServer)
 
 	go func() {
@@ -93,14 +88,10 @@ func (s *CurrencyServer) GetAtDate(
 	ctx context.Context,
 	req *pb.GetAtDateRequest,
 ) (*pb.GetOneResponse, error) {
-	code, err := domain.ParseCurrencyCode(req.Code)
-	if err != nil {
-		return nil, err
-	}
 
 	date := req.Date.AsTime()
 
-	currency, err := s.service.GetAtDate(ctx, code, date)
+	currency, err := s.gateway.GetAtDate(ctx, req.Code, date)
 	if err != nil {
 		return nil, err
 	}

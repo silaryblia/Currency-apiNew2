@@ -62,9 +62,28 @@ func (g *currencyGateway) GetRange(
 
 func (g *currencyGateway) GetAll(
 	ctx context.Context) (map[domain.CurrencyCode]domain.Currency, error) {
+	if !g.service.IsReady() {
+		return nil, domain.ErrServiceNotReady
+	}
 	return g.service.GetAll(ctx)
 }
 
-func (g *currencyGateway) SyncRates(ctx context.Context) error {
-	return g.service.SyncRates(ctx)
+func (g *currencyGateway) SyncRates(ctx context.Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			g.logger.Error("panic in SyncRates", zap.Any("panic", r))
+			err = domain.ErrInternal
+		}
+	}()
+
+	if err = g.service.SyncRatesWithRetry(ctx); err != nil {
+		return err
+	}
+
+	g.service.SetReady()
+	return nil
+}
+
+func (g *currencyGateway) IsReady() bool {
+	return g.service.IsReady()
 }

@@ -31,8 +31,10 @@ func mapError(err error) error {
 	switch err {
 	case domain.ErrNotFound:
 		return status.Error(codes.NotFound, err.Error())
-	case domain.ErrAlreadyExists:
-		return status.Error(codes.AlreadyExists, err.Error())
+	case domain.ErrInvalidArg:
+		return status.Error(codes.InvalidArgument, err.Error())
+	case domain.ErrInternal:
+		return status.Error(codes.Internal, "internal error")
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}
@@ -88,5 +90,39 @@ func (h *CurrencyHandler) GetLatest(
 
 	return &pb.GetOneResponse{
 		Currency: ToProtoCurrency(c),
+	}, nil
+}
+
+func (h *CurrencyHandler) GetAll(
+	ctx context.Context,
+	_ *pb.GetAllRequest,
+) (*pb.GetAllResponse, error) {
+
+	items, err := h.gateway.GetAll(ctx)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	return &pb.GetAllResponse{
+		Currencies: ToProtoCurrencyMap(items),
+	}, nil
+}
+
+func (h *CurrencyHandler) SyncRates(
+	ctx context.Context,
+	_ *pb.GetAllRequest,
+) (*pb.GetAllResponse, error) {
+
+	if err := h.gateway.SyncRates(ctx); err != nil {
+		return nil, mapError(err)
+	}
+
+	items, err := h.gateway.GetAll(ctx)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	return &pb.GetAllResponse{
+		Currencies: ToProtoCurrencyMap(items),
 	}, nil
 }
