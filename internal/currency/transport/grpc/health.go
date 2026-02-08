@@ -4,11 +4,14 @@ import (
 	"Currency-apiNew2/internal/currency/gateway"
 	"context"
 
-	"google.golang.org/grpc/health/grpc_health_v1"
+	//"google.golang.org/grpc/codes"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	//"google.golang.org/grpc/status"
 )
 
 type HealthServer struct {
-	grpc_health_v1.UnimplementedHealthServer
+	//grpc_health_v1.UnimplementedHealthServer
+	healthpb.UnimplementedHealthServer
 	gateway gateway.CurrencyGateway
 }
 
@@ -16,25 +19,25 @@ func NewHealthServer(gw gateway.CurrencyGateway) *HealthServer {
 	return &HealthServer{gateway: gw}
 }
 
-func (h *HealthServer) Check(
+func (s *HealthServer) Check(
 	ctx context.Context,
-	_ *grpc_health_v1.HealthCheckRequest,
-) (*grpc_health_v1.HealthCheckResponse, error) {
+	req *healthpb.HealthCheckRequest,
+) (*healthpb.HealthCheckResponse, error) {
 
-	if !h.gateway.IsReady() {
-		return &grpc_health_v1.HealthCheckResponse{
-			Status: grpc_health_v1.HealthCheckResponse_NOT_SERVING,
+	if s.gateway.IsReady() {
+		return &healthpb.HealthCheckResponse{
+			Status: healthpb.HealthCheckResponse_SERVING,
 		}, nil
 	}
 
-	return &grpc_health_v1.HealthCheckResponse{
-		Status: grpc_health_v1.HealthCheckResponse_SERVING,
+	return &healthpb.HealthCheckResponse{
+		Status: healthpb.HealthCheckResponse_NOT_SERVING,
 	}, nil
 }
 
-func (h *HealthServer) Watch(
-	req *grpc_health_v1.HealthCheckRequest,
-	stream grpc_health_v1.Health_WatchServer,
-) error {
-	return nil
-}
+//func (h *HealthServer) Watch(
+//	req *grpc_health_v1.HealthCheckRequest,
+//	stream grpc_health_v1.Health_WatchServer,
+//) error {
+//	return status.Error(codes.Unimplemented, "watch not implemented")
+//}

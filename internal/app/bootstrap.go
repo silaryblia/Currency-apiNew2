@@ -36,6 +36,7 @@ func (a *App) Init(ctx context.Context) error {
 
 	if err := a.Gateway.SyncRates(ctx); err != nil {
 		a.Logger.Error("initial rates sync failed", zap.Error(err))
+		return err
 	}
 
 	return nil
@@ -51,7 +52,9 @@ func (a *App) RunScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				_ = a.Gateway.SyncRates(ctx)
+				if err := a.Gateway.SyncRates(ctx); err != nil {
+					a.Logger.Error("scheduled sync failed", zap.Error(err))
+				}
 			}
 		}
 	}()

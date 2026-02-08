@@ -1,14 +1,11 @@
 package grpc
 
 import (
-	"Currency-apiNew2/internal/currency/domain"
 	"Currency-apiNew2/internal/currency/gateway"
 	pb "Currency-apiNew2/internal/currency/proto"
 	"context"
 
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type CurrencyHandler struct {
@@ -27,18 +24,18 @@ func NewCurrencyHandler(
 	}
 }
 
-func mapError(err error) error {
-	switch err {
-	case domain.ErrNotFound:
-		return status.Error(codes.NotFound, err.Error())
-	case domain.ErrInvalidArg:
-		return status.Error(codes.InvalidArgument, err.Error())
-	case domain.ErrInternal:
-		return status.Error(codes.Internal, "internal error")
-	default:
-		return status.Error(codes.Internal, err.Error())
-	}
-}
+//func mapError(err error) error {
+//	switch err {
+//	case domain.ErrNotFound:
+//		return status.Error(codes.NotFound, err.Error())
+//	case domain.ErrInvalidArg:
+//		return status.Error(codes.InvalidArgument, err.Error())
+//	case domain.ErrInternal:
+//		return status.Error(codes.Internal, "internal error")
+//	default:
+//		return status.Error(codes.Internal, err.Error())
+//	}
+//}
 
 func (h *CurrencyHandler) GetAtDate(
 	ctx context.Context,

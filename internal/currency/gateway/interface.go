@@ -11,6 +11,7 @@ type CurrencyGateway interface {
 	GetAtDate(ctx context.Context, code string, date time.Time) (domain.Currency, error)
 	GetRange(ctx context.Context, code string, from, to time.Time) ([]domain.Currency, error)
 	GetAll(ctx context.Context) (map[domain.CurrencyCode]domain.Currency, error)
+
 	SyncRates(ctx context.Context) error
 	IsReady() bool
 }
