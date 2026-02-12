@@ -2,11 +2,14 @@ package provider
 
 import (
 	"Currency-apiNew2/internal/config"
+	"Currency-apiNew2/internal/metrics"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -51,8 +54,28 @@ func (p *CBRProvider) GetRates(ctx context.Context) (map[string]float64, time.Ti
 	return p.loadRates(ctx)
 }
 
-func (p *CBRProvider) ForceRefresh(ctx context.Context) (map[string]float64, time.Time, error) {
-	return p.loadRates(ctx)
+func (p *CBRProvider) ForceRefresh(
+	ctx context.Context,
+) (map[string]float64, time.Time, error) {
+
+	start := time.Now()
+	metrics.ProviderRequests.WithLabelValues("cbr").Inc()
+
+	defer func() {
+		metrics.ProviderLatency.
+			WithLabelValues("cbr").
+			Observe(time.Since(start).Seconds())
+	}()
+
+	rates, date, err := p.fetch(ctx)
+	if err != nil {
+		metrics.ProviderErrors.
+			WithLabelValues("cbr", classifyProviderError(err)).
+			Inc()
+		return nil, time.Time{}, err
+	}
+
+	return rates, date, nil
 }
 
 func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.Time, error) {
@@ -159,6 +182,44 @@ func (p *CBRProvider) loadRates(ctx context.Context) (map[string]float64, time.T
 	//result["RUB"] = 1.0
 
 	return result, rateDate, nil
+}
+
+func (p *CBRProvider) fetch(
+	ctx context.Context,
+) (map[string]float64, time.Time, error) {
+	return p.loadRates(ctx)
+}
+
+func classifyProviderError(err error) string {
+	if err == nil {
+		return "unknown"
+	}
+
+	// context
+	if err == context.DeadlineExceeded || err == context.Canceled {
+		return "timeout"
+	}
+
+	// HTTP errors
+	var httpErr *url.Error
+	if errors.As(err, &httpErr) {
+		return "network"
+	}
+
+	msg := strings.ToLower(err.Error())
+
+	switch {
+	case strings.Contains(msg, "timeout"):
+		return "timeout"
+	case strings.Contains(msg, "bad status"):
+		return "http_status"
+	case strings.Contains(msg, "decode"),
+		strings.Contains(msg, "xml"),
+		strings.Contains(msg, "parse"):
+		return "decode"
+	default:
+		return "unknown"
+	}
 }
 
 //func round2(v float64) float64 {

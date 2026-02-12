@@ -2,6 +2,7 @@ package app
 
 import (
 	"Currency-apiNew2/internal/config"
+	"Currency-apiNew2/internal/currency/storage/postgres"
 	"Currency-apiNew2/pkg/logger"
 	"context"
 	"fmt"
@@ -34,13 +35,36 @@ func (a *App) Init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
+	// ✅ Проверяем БД
+	if err := a.DB.PingContext(ctx); err != nil {
+		return err
+	}
+
+	// ✅ Создаём таблицы
+	if err := postgres.Migrate(ctx, a.DB); err != nil {
+		return err
+	}
+
+	// ✅ Первичная загрузка курсов
 	if err := a.Gateway.SyncRates(ctx); err != nil {
-		a.Logger.Error("initial rates sync failed", zap.Error(err))
 		return err
 	}
 
 	return nil
 }
+
+//func (a *App) Init(ctx context.Context) error {
+//
+//	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+//	defer cancel()
+//
+//	if err := a.Gateway.SyncRates(ctx); err != nil {
+//		a.Logger.Error("initial rates sync failed", zap.Error(err))
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func (a *App) RunScheduler(ctx context.Context) {
 	go func() {

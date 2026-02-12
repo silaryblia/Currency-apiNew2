@@ -7,9 +7,10 @@ RUN go mod download
 
 COPY . .
 
-##RUN go build -o app .
+ARG SERVICE
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -o app ./cmd/api
+    go build -o app ./cmd/${SERVICE}
 
 FROM alpine:latest
 
@@ -18,7 +19,5 @@ WORKDIR /app
 COPY --from=builder /app/app /app/app
 
 RUN apk --no-cache add tzdata ca-certificates
-
-EXPOSE 50051
 
 CMD ["./app"]

@@ -3,6 +3,7 @@ package grpc
 import (
 	"Currency-apiNew2/internal/currency/gateway"
 	pb "Currency-apiNew2/internal/currency/proto"
+	"Currency-apiNew2/internal/metrics"
 	"context"
 	"fmt"
 	"net"
@@ -70,7 +71,12 @@ func RunServer(
 		return fmt.Errorf("grpc listen %s: %w", addr, err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(
+			metrics.UnaryServerInterceptor(),
+		),
+	)
+
 	pb.RegisterCurrencyServiceServer(grpcServer, NewCurrencyServer(gateway))
 	grpc_health_v1.RegisterHealthServer(grpcServer, NewHealthServer(gateway))
 	reflection.Register(grpcServer)

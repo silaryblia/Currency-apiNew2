@@ -14,6 +14,11 @@ type Config struct {
 	Notification domain.NotificationConfig
 
 	CBR CBRConfig `yaml:"cbr"`
+	DB  DBConfig  `yaml:"db"`
+}
+
+type DBConfig struct {
+	DSN string `yaml:"dsn" env:"DB_DSN"`
 }
 type HTTPConfig struct {
 	Timeout         time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT"`
@@ -47,5 +52,8 @@ func DefaultConfig() *Config {
 		GRPCPort:    "50051",
 		LogMode:     "dev",
 		CBR:         *DefaultCBRConfig(),
+		DB: DBConfig{
+			DSN: "host=postgres port=5432 user=currency password=currency dbname=currency sslmode=disable",
+		},
 	}
 }

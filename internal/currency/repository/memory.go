@@ -31,18 +31,6 @@ func NewCurrencyRepoInMemory(logger *zap.Logger) *CurrencyRepoInMemory {
 	}
 }
 
-func (r *CurrencyRepoInMemory) GetOne(ctx context.Context,
-	code domain.CurrencyCode) (domain.Currency, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	c, ok := r.latest[code]
-	if !ok {
-		return domain.Currency{}, domain.ErrNotFound
-	}
-	return c, nil
-}
-
 func (r *CurrencyRepoInMemory) GetAll(ctx context.Context) (map[domain.CurrencyCode]domain.Currency, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -52,75 +40,6 @@ func (r *CurrencyRepoInMemory) GetAll(ctx context.Context) (map[domain.CurrencyC
 		res[k] = v
 	}
 	return res, nil
-}
-
-func (r *CurrencyRepoInMemory) Upsert(
-	ctx context.Context,
-	code domain.CurrencyCode,
-	rate domain.Rate,
-	date time.Time) error {
-	return r.SaveRate(ctx, code, rate, date)
-}
-
-// add new currency
-func (r *CurrencyRepoInMemory) Create(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, ok := r.latest[code]; ok {
-		return domain.ErrAlreadyExists
-	}
-
-	r.latest[code] = domain.Currency{
-		Code:     code,
-		Rate:     rate,
-		RateDate: date,
-	}
-	return nil
-}
-
-// update one currency
-func (r *CurrencyRepoInMemory) UpdateOne(ctx context.Context, code domain.CurrencyCode, rate domain.Rate, date time.Time) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if _, ok := r.latest[code]; !ok {
-		return domain.ErrNotFound
-	}
-
-	if _, ok := r.latest[code]; !ok {
-		return domain.ErrNotFound
-	}
-
-	r.latest[code] = domain.Currency{
-		Code:     code,
-		Rate:     rate,
-		RateDate: date,
-	}
-	return nil
-}
-
-// Update
-func (r *CurrencyRepoInMemory) UpdateAll(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	now := time.Now()
-	for code, currency := range r.latest {
-		currency.RateDate = now
-		r.latest[code] = currency
-	}
-
-	return nil
-}
-
-// Delete
-func (r *CurrencyRepoInMemory) DeleteAll(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.latest = make(map[domain.CurrencyCode]domain.Currency)
-	return nil
 }
 
 func (r *CurrencyRepoInMemory) SaveRate(

@@ -8,6 +8,8 @@ import (
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
+	"Currency-apiNew2/internal/metrics"
+	"database/sql"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,12 +19,23 @@ type App struct {
 	Logger  *zap.Logger
 	Gateway gateway.CurrencyGateway
 	Config  *config.Config
+	DB      *sql.DB
 	//Service *service.CurrencyService
 }
 
 func BuildApp() *App {
+
 	cfg := MustLoadConfig()
 	log := MustInitLogger(cfg.LogMode)
+
+	db, err := sql.Open("postgres", cfg.DB.DSN)
+	if err != nil {
+		log.Fatal("failed to open db", zap.Error(err))
+	}
+
+	if err := db.Ping(); err != nil {
+		log.Fatal("failed to ping db", zap.Error(err))
+	}
 
 	repo := repository.NewCurrencyRepoInMemory(log)
 
@@ -40,11 +53,13 @@ func BuildApp() *App {
 	)
 
 	gw := gateway.NewCurrencyGateway(svc, log)
+	metrics.MustRegister()
 
 	return &App{
 		Logger:  log,
 		Gateway: gw,
 		Config:  cfg,
+		DB:      db,
 		//	Service: svc,
 	}
 }

@@ -3,6 +3,7 @@ package gateway
 import (
 	"Currency-apiNew2/internal/currency/domain"
 	"Currency-apiNew2/internal/currency/service"
+	"Currency-apiNew2/internal/metrics"
 	"context"
 	"time"
 
@@ -72,15 +73,19 @@ func (g *currencyGateway) SyncRates(ctx context.Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			g.logger.Error("panic in SyncRates", zap.Any("panic", r))
+			metrics.Ready.Set(0)
 			err = domain.ErrInternal
 		}
 	}()
 
 	if err = g.service.SyncRatesWithRetry(ctx); err != nil {
+		metrics.Ready.Set(0)
 		return err
 	}
 
 	g.service.SetReady()
+	metrics.Ready.Set(1)
+
 	return nil
 }
 
