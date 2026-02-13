@@ -195,12 +195,10 @@ func classifyProviderError(err error) string {
 		return "unknown"
 	}
 
-	// context
 	if err == context.DeadlineExceeded || err == context.Canceled {
 		return "timeout"
 	}
 
-	// HTTP errors
 	var httpErr *url.Error
 	if errors.As(err, &httpErr) {
 		return "network"
@@ -221,7 +219,3 @@ func classifyProviderError(err error) string {
 		return "unknown"
 	}
 }
-
-//func round2(v float64) float64 {
-//	return math.Round(v*100) / 100
-//}

@@ -11,7 +11,7 @@ func ValidateCreateCurrency(
 	if rate.Float64() <= 0 {
 		return fmt.Errorf("rate must be greater than zero")
 	}
-	// Проверяем код валюты
+
 	if err := ValidateCurrencyCode(code); err != nil {
 		return err
 	}

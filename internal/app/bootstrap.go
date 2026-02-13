@@ -53,19 +53,6 @@ func (a *App) Init(ctx context.Context) error {
 	return nil
 }
 
-//func (a *App) Init(ctx context.Context) error {
-//
-//	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-//	defer cancel()
-//
-//	if err := a.Gateway.SyncRates(ctx); err != nil {
-//		a.Logger.Error("initial rates sync failed", zap.Error(err))
-//		return err
-//	}
-//
-//	return nil
-//}
-
 func (a *App) RunScheduler(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(24 * time.Hour)

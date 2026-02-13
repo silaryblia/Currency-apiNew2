@@ -34,10 +34,3 @@ func (s *HealthServer) Check(
 		Status: healthpb.HealthCheckResponse_NOT_SERVING,
 	}, nil
 }
-
-//func (h *HealthServer) Watch(
-//	req *grpc_health_v1.HealthCheckRequest,
-//	stream grpc_health_v1.Health_WatchServer,
-//) error {
-//	return status.Error(codes.Unimplemented, "watch not implemented")
-//}

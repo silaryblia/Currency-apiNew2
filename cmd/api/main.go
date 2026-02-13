@@ -26,9 +26,10 @@ func main() {
 	app := app.BuildApp()
 	defer app.Shutdown()
 
-	// =========================
-	// HTTP (health + metrics)
-	// =========================
+	if err := app.Init(ctx); err != nil {
+		app.Logger.Fatal("init failed", zap.Error(err))
+	}
+
 	mux := http.NewServeMux()
 
 	healthHandler := currencyhttp.NewHealthHandler(app)
@@ -49,21 +50,8 @@ func main() {
 		}
 	}()
 
-	// =========================
-	// INIT
-	// =========================
-	if err := app.Init(ctx); err != nil {
-		app.Logger.Fatal("init failed", zap.Error(err))
-	}
-
-	// =========================
-	// Scheduler
-	// =========================
 	go app.RunScheduler(ctx)
 
-	// =========================
-	// gRPC
-	// =========================
 	go func() {
 		app.Logger.Info("gRPC server started",
 			zap.String("port", app.Config.GRPCPort),
@@ -74,9 +62,6 @@ func main() {
 		}
 	}()
 
-	// =========================
-	// Shutdown
-	// =========================
 	<-ctx.Done()
 	app.Logger.Info("shutting down...")
 

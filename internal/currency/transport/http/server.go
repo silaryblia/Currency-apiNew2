@@ -43,9 +43,8 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 		repo = repository.NewCurrencyRepoInMemory(logger)
 	}
 
-	// Базовый провайдер ЦБ РФ
 	baseProvider := provider.NewCBRProvider(&cfg.CBR)
-	// Кеш на 24 часа
+
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
 	notificationSvc := notification.NewLoggerNotificationService(logger)
 	notifyCfg := domain.NotificationConfig{
@@ -53,7 +52,6 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 		SlowThreshold:      100 * time.Millisecond, // 100ms
 	}
 
-	// В сервис передаём КЕШ
 	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc, logger, notifyCfg)
 	r := NewRouter(svc, logger)
 

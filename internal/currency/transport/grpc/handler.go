@@ -24,19 +24,6 @@ func NewCurrencyHandler(
 	}
 }
 
-//func mapError(err error) error {
-//	switch err {
-//	case domain.ErrNotFound:
-//		return status.Error(codes.NotFound, err.Error())
-//	case domain.ErrInvalidArg:
-//		return status.Error(codes.InvalidArgument, err.Error())
-//	case domain.ErrInternal:
-//		return status.Error(codes.Internal, "internal error")
-//	default:
-//		return status.Error(codes.Internal, err.Error())
-//	}
-//}
-
 func (h *CurrencyHandler) GetAtDate(
 	ctx context.Context,
 	req *pb.GetAtDateRequest,

@@ -20,7 +20,6 @@ type App struct {
 	Gateway gateway.CurrencyGateway
 	Config  *config.Config
 	DB      *sql.DB
-	//Service *service.CurrencyService
 }
 
 func BuildApp() *App {
@@ -60,6 +59,5 @@ func BuildApp() *App {
 		Gateway: gw,
 		Config:  cfg,
 		DB:      db,
-		//	Service: svc,
 	}
 }
