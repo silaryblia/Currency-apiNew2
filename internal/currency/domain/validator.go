@@ -1,20 +1,41 @@
 package domain
 
 import (
-	"errors"
+	"fmt"
 	"strings"
 )
 
-func ValidateCurrency(code string, rate float64) error {
-	code = strings.TrimSpace(code)
-
-	if len(code) != 3 {
-		return errors.New("currency code must be ISO-4217 (3 letters)")
+func ValidateCreateCurrency(
+	code CurrencyCode,
+	rate Rate) error {
+	if rate.Float64() <= 0 {
+		return fmt.Errorf("rate must be greater than zero")
 	}
 
-	if rate <= 0 {
-		return errors.New("rate must be greater than zero")
+	if err := ValidateCurrencyCode(code); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ValidateRateChange(oldRate, newRate Rate) error {
+	if newRate.Float64() <= 0 {
+		return fmt.Errorf("%w: rate must be greater than ZERO", ErrValidation)
+	}
+	return nil
+}
+
+func ValidateCurrencyCode(code CurrencyCode) error {
+	s := string(code)
+	if len(s) != 3 {
+		return fmt.Errorf("currency code must be 3 characters")
 	}
 
+	s = strings.ToUpper(s)
+	for _, c := range s {
+		if c < 'A' || c > 'Z' {
+			return fmt.Errorf("currency code must contain only letters")
+		}
+	}
 	return nil
 }

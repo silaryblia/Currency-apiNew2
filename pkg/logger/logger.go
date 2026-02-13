@@ -1,8 +1,23 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"fmt"
 
-func New() *zap.Logger {
-	logger, _ := zap.NewDevelopment()
-	return logger
+	"go.uber.org/zap"
+)
+
+const (
+	ModeDev  = "dev"
+	ModeProd = "prod"
+)
+
+func New(mode string) (*zap.Logger, error) {
+	switch mode {
+	case ModeDev:
+		return zap.NewDevelopment()
+	case ModeProd:
+		return zap.NewProduction()
+	default:
+		return nil, fmt.Errorf("unknown logger mode: %s", mode)
+	}
 }

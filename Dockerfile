@@ -1,4 +1,4 @@
-FROM golang:alpine AS builder
+FROM golang:1.25.6-alpine AS builder
 
 WORKDIR /app
 
@@ -7,15 +7,17 @@ RUN go mod download
 
 COPY . .
 
-##RUN go build -o app .
-RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/currency
+ARG SERVICE
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -o app ./cmd/${SERVICE}
 
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/app .
+COPY --from=builder /app/app /app/app
 
-EXPOSE 8081
+RUN apk --no-cache add tzdata ca-certificates
 
-ENTRYPOINT ["./app"]
+CMD ["./app"]

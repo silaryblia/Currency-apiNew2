@@ -1,12 +1,15 @@
 package http
 
 import (
+	"Currency-apiNew2/internal/config"
 	"Currency-apiNew2/internal/currency/domain"
+	"Currency-apiNew2/internal/currency/notification"
 	"Currency-apiNew2/internal/currency/provider"
 	"Currency-apiNew2/internal/currency/repository"
 	"Currency-apiNew2/internal/currency/service"
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,51 +22,45 @@ import (
 )
 
 type Server struct {
-	//service *service.CurrencyService
 	router *mux.Router
 	logger *zap.Logger
 }
 
-func NewServer(logger *zap.Logger) *Server {
+func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	var repo domain.CurrencyRepository
 
-	if os.Getenv("USE_POSTGRES") == "true" {
-		dsn := os.Getenv("POSTGRES_DSN")
-		db, err := sql.Open("postgres", dsn)
+	if cfg.UsePostgres {
+		db, err := sql.Open("postgres", cfg.PostgresDSN)
 		if err != nil {
-			logger.Fatal("failed to connect postgres", zap.Error(err))
+			return nil, fmt.Errorf("open postgres: %w", err)
 		}
-
 		if err := db.Ping(); err != nil {
-			logger.Fatal("cannot ping postgres", zap.Error(err))
+			return nil, fmt.Errorf("ping postgres: %w", err)
 		}
 
-		logger.Info("using Postgres repository")
 		repo = repository.NewCurrencyRepoPostgres(db, logger)
 	} else {
-		logger.Info("using InMemory repository")
 		repo = repository.NewCurrencyRepoInMemory(logger)
 	}
 
-	// Базовый провайдер ЦБ РФ
-	baseProvider := provider.NewCBRProvider()
+	baseProvider := provider.NewCBRProvider(&cfg.CBR)
 
-	// Кеш на 24 часа
 	cachedProvider := provider.NewCachedProvider(baseProvider, 24*time.Hour)
+	notificationSvc := notification.NewLoggerNotificationService(logger)
+	notifyCfg := domain.NotificationConfig{
+		RateSpikeThreshold: 0.1,                    // 10%
+		SlowThreshold:      100 * time.Millisecond, // 100ms
+	}
 
-	// В сервис передаём КЕШ
-	svc := service.NewCurrencyService(repo, cachedProvider)
+	svc := service.NewCurrencyService(repo, cachedProvider, notificationSvc, logger, notifyCfg)
 	r := NewRouter(svc, logger)
 
-	return &Server{
-		router: r,
-		logger: logger,
-	}
+	return &Server{router: r, logger: logger}, nil
 }
 
 func (s *Server) Run() error {
 	httpServer := &http.Server{
-		Addr:    ":8081",
+		Addr:    ":50051",
 		Handler: s.router,
 	}
 

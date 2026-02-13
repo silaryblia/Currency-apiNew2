@@ -6,23 +6,27 @@ import (
 )
 
 type APIResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success bool   `json:"success"`
+	Data    any    `json:"data,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
-func WriteJSON(w http.ResponseWriter, status int, data interface{}, errMsg string) {
-	resp := APIResponse{
-		Success: errMsg == "",
-		Data:    data,
-		Error:   errMsg,
-	}
-
+func WriteJSON(w http.ResponseWriter, status int, data any) error {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 
-	if rw, ok := w.(interface{ Written() bool }); !ok || !rw.Written() {
-		w.WriteHeader(status)
-	}
+	return json.NewEncoder(w).Encode(APIResponse{
+		Success: true,
+		Data:    data,
+	})
+}
 
-	_ = json.NewEncoder(w).Encode(resp)
+func WriteError(w http.ResponseWriter, status int, errMsg string) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	return json.NewEncoder(w).Encode(APIResponse{
+		Success: false,
+		Error:   errMsg,
+	})
 }

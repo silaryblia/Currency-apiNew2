@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package currency;
+option go_package = "internal/currency/proto";
+
+import "google/protobuf/timestamp.proto";
+
+message Currency {
+  string code = 1;
+  string rate = 2; // DECIMAL
+  google.protobuf.Timestamp rate_date = 3;
+}
+
+message GetAllRequest {}
+
+message GetAllResponse {
+  map<string, Currency> currencies = 1;
+}
+
+message GetOneRequest {
+  string code = 1;
+}
+
+message GetAtDateRequest {
+  string code = 1;
+  google.protobuf.Timestamp date = 2;
+}
+
+message GetRangeRequest {
+  string code = 1;
+  google.protobuf.Timestamp from = 2;
+  google.protobuf.Timestamp to = 3;
+}
+
+message GetOneResponse {
+  Currency currency = 1;
+}
+
+message GetRangeResponse {
+  repeated Currency currencies = 1;
+}
+
+service CurrencyService {
+  rpc GetAll    (GetAllRequest)    returns (GetAllResponse);
+  rpc GetLatest (GetOneRequest)    returns (GetOneResponse);
+  rpc GetAtDate (GetAtDateRequest) returns (GetOneResponse);
+  rpc GetRange  (GetRangeRequest)  returns (GetRangeResponse);
+  rpc SyncRates (GetAllRequest)    returns (GetAllResponse);
+}

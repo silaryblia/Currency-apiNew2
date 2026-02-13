@@ -6,17 +6,10 @@ import (
 )
 
 type CurrencyRepository interface {
-	//GetOne(code string) (float64, error)
-	//GetAll() (map[string]float64, error)
+	GetAll(ctx context.Context) (map[CurrencyCode]Currency, error)
 
-	//GetAll() ([]Currency, error)
-
-	GetOne(ctx context.Context, code string) (Currency, error)
-	GetAll(ctx context.Context) (map[string]Currency, error)
-	Create(ctx context.Context, code string, rate float64, date time.Time) error
-	UpdateOne(ctx context.Context, code string, rate float64, date time.Time) error
-	UpdateAll(ctx context.Context) error
-	DeleteAll(ctx context.Context) error
-
-	Upsert(ctx context.Context, code string, rate float64, date time.Time) error
+	SaveRate(ctx context.Context, code CurrencyCode, rate Rate, date time.Time) error
+	GetLatest(ctx context.Context, code CurrencyCode) (Currency, error)
+	GetAtDate(ctx context.Context, code CurrencyCode, date time.Time) (Currency, error)
+	GetRange(ctx context.Context, code CurrencyCode, from, to time.Time) ([]Currency, error)
 }

@@ -1,4 +1,7 @@
+version: "3.9"
+
 services:
+
   postgres:
     image: postgres:15-alpine
     container_name: currency-postgres
@@ -7,30 +10,82 @@ services:
       POSTGRES_PASSWORD: currency
       POSTGRES_DB: currency
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - currency-data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U currency"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
   currency-api:
-    build: .
-    container_name: currency-api
-    depends_on:
-      postgres:
-        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api
+    container_name: currency
     environment:
-      USE_POSTGRES: "true"
-      POSTGRES_DSN: "postgres://currency:currency@postgres:5432/currency?sslmode=disable"
-      PORT: "8081"
+      - GRPC_PORT=50051
+      - DB_DSN=host=postgres port=5432 user=currency password=currency dbname=currency sslmode=disable
     ports:
+      - "50051:50051"
       - "8081:8081"
-    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: gateway
+    container_name: gateway
+    environment:
+      - JWT_SECRET=super-secret-key
+    ports:
+      - "8080:8080"
+    depends_on:
+      - currency-api
+      - auth-service
+    networks:
+      - backend
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth
+    container_name: auth-service
+    environment:
+      - JWT_SECRET=super-secret-key
+    ports:
+      - "8082:8081"
+    networks:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
 
 volumes:
-  currency-data:
+  postgres_data:
