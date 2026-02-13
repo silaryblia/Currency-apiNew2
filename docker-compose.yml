@@ -28,7 +28,7 @@ services:
       - DB_DSN=host=postgres port=5432 user=currency password=currency dbname=currency sslmode=disable
     ports:
       - "50051:50051"
-      - "2112:2112"
+      - "8081:8081"
     depends_on:
       - postgres
     networks:
@@ -61,12 +61,13 @@ services:
     environment:
       - JWT_SECRET=super-secret-key
     ports:
-      - "8081:8081"
+      - "8082:8081"
     networks:
       - backend
 
   prometheus:
     image: prom/prometheus:v2.52.0
+    container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -76,13 +77,14 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.2
+    container_name: grafana
     ports:
       - "3000:3000"
     networks:
       - backend
 
-networks:                    # ← ДОБАВИТЬ
-  backend:                  # ← ДОБАВИТЬ
+networks:
+  backend:
     driver: bridge
 
 volumes:

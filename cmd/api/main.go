@@ -2,66 +2,88 @@ package main
 
 import (
 	"Currency-apiNew2/internal/app"
-	pb "Currency-apiNew2/internal/currency/proto"
 	"Currency-apiNew2/internal/currency/transport/grpc"
 	currencyhttp "Currency-apiNew2/internal/currency/transport/http"
 	"context"
-	nethttp "net/http"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
-type server struct {
-	pb.CurrencyServiceServer
-}
-
 func main() {
 	ctx, stop := signal.NotifyContext(
 		context.Background(),
 		os.Interrupt,
-		syscall.SIGTERM)
+		syscall.SIGTERM,
+	)
 	defer stop()
-
-	// metrics - ИСПОЛЬЗУЕМ nethttp
-	go func() {
-		nethttp.Handle("/metrics", promhttp.Handler())
-		if err := nethttp.ListenAndServe(":2112", nil); err != nil {
-			panic(err)
-		}
-	}()
 
 	app := app.BuildApp()
 	defer app.Shutdown()
 
-	// ИСПОЛЬЗУЕМ currencyhttp ДЛЯ ТВОЕГО ХЕНДЛЕРА
-	healthHandler := currencyhttp.NewHealthHandler(app)
+	// =========================
+	// HTTP (health + metrics)
+	// =========================
+	mux := http.NewServeMux()
 
-	// ИСПОЛЬЗУЕМ nethttp ДЛЯ ВСЕГО СТАНДАРТНОГО
-	mux := nethttp.NewServeMux()
+	healthHandler := currencyhttp.NewHealthHandler(app)
 	mux.HandleFunc("/health", healthHandler.Health)
 	mux.HandleFunc("/ready", healthHandler.Ready)
+	mux.Handle("/metrics", promhttp.Handler())
+
+	httpSrv := &http.Server{
+		Addr:    ":8081",
+		Handler: mux,
+	}
 
 	go func() {
-		if err := nethttp.ListenAndServe(":8082", mux); err != nil {
-			app.Logger.Error("health server failed", zap.Error(err))
+		app.Logger.Info("HTTP server started on :8081")
+		if err := httpSrv.ListenAndServe(); err != nil &&
+			err != http.ErrServerClosed {
+			app.Logger.Fatal("http server failed", zap.Error(err))
 		}
 	}()
 
+	// =========================
+	// INIT
+	// =========================
 	if err := app.Init(ctx); err != nil {
 		app.Logger.Fatal("init failed", zap.Error(err))
 	}
 
+	// =========================
+	// Scheduler
+	// =========================
 	go app.RunScheduler(ctx)
+
+	// =========================
+	// gRPC
+	// =========================
 	go func() {
+		app.Logger.Info("gRPC server started",
+			zap.String("port", app.Config.GRPCPort),
+		)
+
 		if err := grpc.RunServer(ctx, app.Gateway, app.Config.GRPCPort); err != nil {
 			app.Logger.Error("gRPC server error", zap.Error(err))
 		}
 	}()
 
+	// =========================
+	// Shutdown
+	// =========================
 	<-ctx.Done()
-	app.Logger.Info("API service stopped")
+	app.Logger.Info("shutting down...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_ = httpSrv.Shutdown(shutdownCtx)
+
+	app.Logger.Info("API stopped")
 }
